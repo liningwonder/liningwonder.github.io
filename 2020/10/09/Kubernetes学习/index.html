@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"localhost","root":"/","scheme":"Muse","version":"7.7.2","exturl":false,"sidebar":{"position":"left","display":"hide","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1 Kubernetes基本概念 1.1 应用部署历史形态 1.2 Kubernetes 功能 1.3 Kubernetes 组件 1.3.1 主节点上运行控制平面组件 1.3.2 工作节点运行Node所需组件 1.3.3 客户端 1.3.4 Kubenetes对象 1.3.5 Pods 1.3.6 Service 1.3.7 Deploments   1.4 存储   2 使用 Minik">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes安装">
+<meta property="og:url" content="http://localhost:4000/2020/10/09/Kubernetes%E5%AD%A6%E4%B9%A0/index.html">
+<meta property="og:site_name" content="李宁的博客">
+<meta property="og:description" content="1 Kubernetes基本概念 1.1 应用部署历史形态 1.2 Kubernetes 功能 1.3 Kubernetes 组件 1.3.1 主节点上运行控制平面组件 1.3.2 工作节点运行Node所需组件 1.3.3 客户端 1.3.4 Kubenetes对象 1.3.5 Pods 1.3.6 Service 1.3.7 Deploments   1.4 存储   2 使用 Minik">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://d33wubrfki0l68.cloudfront.net/26a177ede4d7b032362289c6fccd448fc4a91174/eb693/images/docs/container_evolution.svg">
+<meta property="og:image" content="https://d33wubrfki0l68.cloudfront.net/7016517375d10c702489167e704dcb99e570df85/7bb53/images/docs/components-of-kubernetes.png">
+<meta property="article:published_time" content="2020-10-08T16:00:00.000Z">
+<meta property="article:modified_time" content="2021-02-25T02:42:01.739Z">
+<meta property="article:author" content="李宁">
+<meta property="article:tag" content="Kubernetes">
+<meta property="article:tag" content="Minikube">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://d33wubrfki0l68.cloudfront.net/26a177ede4d7b032362289c6fccd448fc4a91174/eb693/images/docs/container_evolution.svg">
+
+<link rel="canonical" href="http://localhost:4000/2020/10/09/Kubernetes%E5%AD%A6%E4%B9%A0/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true
+  };
+</script>
+
+  <title>Kubernetes安装 | 李宁的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">李宁的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://localhost:4000/2020/10/09/Kubernetes%E5%AD%A6%E4%B9%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="李宁">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="李宁的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Kubernetes安装
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-10-09 00:00:00" itemprop="dateCreated datePublished" datetime="2020-10-09T00:00:00+08:00">2020-10-09</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2021-02-25 10:42:01" itemprop="dateModified" datetime="2021-02-25T10:42:01+08:00">2021-02-25</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index"><span itemprop="name">Kubernetes</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <!-- toc -->
+
+<ul>
+<li><a href="#1-kubernetes基本概念">1 Kubernetes基本概念</a><ul>
+<li><a href="#11-应用部署历史形态">1.1 应用部署历史形态</a></li>
+<li><a href="#12-kubernetes-功能">1.2 Kubernetes 功能</a></li>
+<li><a href="#13-kubernetes-组件">1.3 Kubernetes 组件</a><ul>
+<li><a href="#131-主节点上运行控制平面组件">1.3.1 主节点上运行控制平面组件</a></li>
+<li><a href="#132-工作节点运行node所需组件">1.3.2 工作节点运行Node所需组件</a></li>
+<li><a href="#133-客户端">1.3.3 客户端</a></li>
+<li><a href="#134-kubenetes对象">1.3.4 Kubenetes对象</a></li>
+<li><a href="#135-pods">1.3.5 Pods</a></li>
+<li><a href="#136-service">1.3.6 Service</a></li>
+<li><a href="#137-deploments">1.3.7 Deploments</a></li>
+</ul>
+</li>
+<li><a href="#14-存储">1.4 存储</a></li>
+</ul>
+</li>
+<li><a href="#2-使用-minikube-安装-kubernetes">2 使用 Minikube 安装 Kubernetes</a><ul>
+<li><a href="#21-安装条件与准备">2.1 安装条件与准备</a></li>
+</ul>
+</li>
+</ul>
+<!-- tocstop -->
+
+<hr>
+<h3><span id="1-kubernetes基本概念">1 Kubernetes基本概念</span></h3><p>​    Kubernetes 是一个可移植的、可扩展的开源平台，用于管理容器化的工作负载和服务，可促进声明式配置和自动化。</p>
+<p>​    Kubernetes is an open-source system for automating deployment, scaling, and management of containerized applications</p>
+<p>​    Kubernetes是用于自动部署，扩展和管理<strong>容器化应用程序</strong>的开源系统。</p>
+<h4><span id="11-应用部署历史形态">1.1 应用部署历史形态</span></h4><p><img src="https://d33wubrfki0l68.cloudfront.net/26a177ede4d7b032362289c6fccd448fc4a91174/eb693/images/docs/container_evolution.svg" alt="部署演进"></p>
+<p><strong>传统部署时代</strong></p>
+<p><strong>虚拟化部署时代</strong></p>
+<p><strong>容器部署时代</strong></p>
+<h4><span id="12-kubernetes-功能">1.2 Kubernetes 功能</span></h4><p><strong>服务发现和负载均衡</strong></p>
+<p><strong>存储编排</strong></p>
+<p><strong>自动部署和回滚</strong></p>
+<p><strong>自我修复</strong></p>
+<p><strong>密钥与配置管理</strong></p>
+<h4><span id="13-kubernetes-组件">1.3 Kubernetes 组件</span></h4><p><strong>集群</strong></p>
+<p>1个Kubernetes集群由一组被称作节点的机器组成，集群中具有至少一个工作节点和至少一个主节点。</p>
+<p><img src="https://d33wubrfki0l68.cloudfront.net/7016517375d10c702489167e704dcb99e570df85/7bb53/images/docs/components-of-kubernetes.png" alt="Kubernetes 组件"></p>
+<p>常见的高可用集群由 3个主节点 + 3个工作节点组成</p>
+<h5><span id="131-主节点上运行控制平面组件">1.3.1 主节点上运行控制平面组件</span></h5><p>Control Plane Components</p>
+<p><strong>kube-apiserver</strong></p>
+<p>集群的API服务器， API 服务器负责提供 HTTP API，以供用户、集群中的不同部分和集群外部组件相互通信。Kubernetes API 使你可以查询和操纵 Kubernetes API 中对象。</p>
+<p><strong>etcd</strong></p>
+<p>保存 Kubernetes 所有集群数据的后台数据库</p>
+<p><strong>kube-scheduler</strong></p>
+<p>集群资源调度器，用于监视并调度Pod</p>
+<p><strong>kube-controller-manager</strong></p>
+<p>控制器有几种类型，分为：</p>
+<p>节点控制器：负责在节点出现故障时进行通知和响应。</p>
+<p>副本控制器：负责为系统中的每个副本控制器对象维护正确数量的 Pod。</p>
+<p>端点控制器：填充端点(Endpoints)对象(即加入 Service 与 Pod)。</p>
+<p>服务帐户和令牌控制器：为新的命名空间创建默认帐户和 API 访问令牌.</p>
+<p><strong>cloud-controller-manager</strong></p>
+<p>用于与云平台集成</p>
+<h5><span id="132-工作节点运行node所需组件">1.3.2 工作节点运行Node所需组件</span></h5><p>Kubernetes 通过将容器放入在节点（Node）上运行的 Pod 中来执行你的工作负载。 节点可以是一个虚拟机或者物理机器，取决于所在的集群配置。每个节点都包含用于运行 <a href="https://kubernetes.io/docs/concepts/workloads/pods/pod-overview/" target="_blank" rel="noopener">Pod</a> 所需要的服务，这些服务由 <a href="https://kubernetes.io/zh/docs/reference/glossary/?all=true#term-control-plane" target="_blank" rel="noopener">控制面</a>负责管理。</p>
+<p>节点上的<a href="https://kubernetes.io/zh/docs/concepts/overview/components/#node-components" target="_blank" rel="noopener">组件</a>包括 <a href="https://kubernetes.io/docs/reference/generated/kubelet" target="_blank" rel="noopener">kubelet</a>、 <a href="https://kubernetes.io/docs/setup/production-environment/container-runtimes" target="_blank" rel="noopener">容器运行时</a>以及 <a href="https://kubernetes.io/zh/docs/reference/command-line-tools-reference/kube-proxy/" target="_blank" rel="noopener">kube-proxy</a>。</p>
+<p>一个节点的状态包含以下信息:</p>
+<ul>
+<li><a href="https://kubernetes.io/zh/docs/concepts/architecture/nodes/#addresses" target="_blank" rel="noopener">地址</a></li>
+<li><a href="https://kubernetes.io/zh/docs/concepts/architecture/nodes/#condition" target="_blank" rel="noopener">状况</a></li>
+<li><a href="https://kubernetes.io/zh/docs/concepts/architecture/nodes/#capacity" target="_blank" rel="noopener">容量与可分配</a></li>
+<li><a href="https://kubernetes.io/zh/docs/concepts/architecture/nodes/#info" target="_blank" rel="noopener">信息</a></li>
+</ul>
+<ul>
+<li>HostName：由节点的内核设置。可以通过 kubelet 的 <code>--hostname-override</code> 参数覆盖。</li>
+<li>ExternalIP：通常是节点的可外部路由（从集群外可访问）的 IP 地址。</li>
+<li>InternalIP：通常是节点的仅可在集群内部路由的 IP 地址。</li>
+</ul>
+<p><strong>kubelet</strong></p>
+<p>节点的kubenetes代理</p>
+<p><strong>kube-proxy</strong></p>
+<p>节点的网络代理</p>
+<p><strong>Container Runtime</strong></p>
+<p>容器运行环境</p>
+<h5><span id="133-客户端">1.3.3 客户端</span></h5><p>Kubectl 与APIServer通信</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl [command] [TYPE] [NAME] [flags]</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h5><span id="134-kubenetes对象">1.3.4 Kubenetes对象</span></h5><p><em>Kubernetes 对象</em> 是持久化的实体，一旦创建对象，Kubernetes 系统将持续工作以确保对象存在。一个Kubernetes对象描述了：</p>
+<p>（1）哪些容器化应用在运行，这些应用运行在哪些节点</p>
+<p>（2）应用可以使用哪些资源</p>
+<p>（3）应用运行时的策略：重启、升级、容错等</p>
+<p><strong>对象元素据、规约、状态、</strong></p>
+<p>元数据 metadata </p>
+<p>规约 Spec</p>
+<p>状态 Status</p>
+<p>创建 Kubernetes 对象时，必须提供对象的规约，用来描述该对象的期望状态， 以及关于对象的一些基本信息。使用kubectl创建对象时需提供yaml格式的文件描述对象的这些信息。</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">apps/v1</span> <span class="comment"># for versions before 1.9.0 use apps/v1beta2</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">Deployment</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line">  <span class="attr">name:</span> <span class="string">nginx-deployment</span></span><br><span class="line"><span class="attr">spec:</span></span><br><span class="line">  <span class="attr">selector:</span></span><br><span class="line">    <span class="attr">matchLabels:</span></span><br><span class="line">      <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">  <span class="attr">replicas:</span> <span class="number">2</span> <span class="comment"># tells deployment to run 2 pods matching the template</span></span><br><span class="line">  <span class="attr">template:</span></span><br><span class="line">    <span class="attr">metadata:</span></span><br><span class="line">      <span class="attr">labels:</span></span><br><span class="line">        <span class="attr">app:</span> <span class="string">nginx</span></span><br><span class="line">    <span class="attr">spec:</span></span><br><span class="line">      <span class="attr">containers:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="attr">name:</span> <span class="string">nginx</span></span><br><span class="line">        <span class="attr">image:</span> <span class="string">nginx:1.14.2</span></span><br><span class="line">        <span class="attr">ports:</span></span><br><span class="line">        <span class="bullet">-</span> <span class="attr">containerPort:</span> <span class="number">80</span></span><br></pre></td></tr></table></figure>
+
+
+
+<ul>
+<li><p><code>apiVersion</code> - 创建该对象所使用的 Kubernetes API 的版本</p>
+</li>
+<li><p><code>kind</code> - 想要创建的对象的类别  Pod Deployment  Service</p>
+</li>
+<li><p><code>metadata</code> - 帮助唯一性标识对象的一些数据，包括一个 <code>name</code> 字符串、UID 和可选的 <code>namespace</code></p>
+</li>
+<li><p><code>spec</code> 的精确格式对每个 Kubernetes 对象来说是不同的，包含了特定于该对象的嵌套字段</p>
+</li>
+</ul>
+<p>创建一个Deployment对象</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl apply -f https://k8s.io/examples/application/deployment.yaml --record</span><br></pre></td></tr></table></figure>
+
+
+
+<p>集群中的每一个对象都有一个<a href="https://kubernetes.io/zh/docs/concepts/overview/working-with-objects/names/#names" target="_blank" rel="noopener"><em>名称</em></a> 来标识在同类资源中的唯一性。</p>
+<p>每个 Kubernetes 对象也有一个<a href="https://kubernetes.io/zh/docs/concepts/overview/working-with-objects/names/#uids" target="_blank" rel="noopener"><em>UID</em></a> 来标识在整个集群中的唯一性。</p>
+<p>对于用户提供的非唯一性的属性，Kubernetes 提供了 <a href="https://kubernetes.io/zh/docs/concepts/working-with-objects/labels" target="_blank" rel="noopener">标签（Labels）</a>和 <a href="https://kubernetes.io/zh/docs/concepts/overview/working-with-objects/annotations/" target="_blank" rel="noopener">注解（Annotation）</a>机制。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: Pod</span><br><span class="line">metadata:</span><br><span class="line">  name: nginx-demo</span><br><span class="line">spec:</span><br><span class="line">  containers:</span><br><span class="line">  - name: nginx</span><br><span class="line">    image: nginx:1.14.2</span><br><span class="line">    ports:</span><br><span class="line">    - containerPort: 80</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<p><strong>命名空间</strong> NameSpace</p>
+<p>Kubernetes 支持多个虚拟集群，它们底层依赖于同一个物理集群。 这些虚拟集群被称为名字空间。Kubernetes <em>名字空间</em> 帮助不同的项目、团队或客户去共享 Kubernetes 集群。</p>
+<p> <a href="https://kubernetes.io/zh/docs/concepts/architecture/nodes/" target="_blank" rel="noopener">节点</a> 和持久化卷不属于任何名字空间</p>
+<p>Kubernetes 会创建三个初始名字空间</p>
+<ul>
+<li><code>default</code> 没有指明使用其它名字空间的对象所使用的默认名字空间</li>
+<li><code>kube-system</code> Kubernetes 系统创建对象所使用的名字空间</li>
+<li><code>kube-public</code> 这个名字空间是自动创建的，所有用户（包括未经过身份验证的用户）都可以读取它。 这个名字空间主要用于集群使用，以防某些资源在整个集群中应该是可见和可读的。 这个名字空间的公共方面只是一种约定，而不是要求。</li>
+<li><code>kube-node-lease</code> 此名字空间用于与各个节点相关的租期（Lease）对象； 此对象的设计使得集群规模很大时节点心跳检测性能得到提升。</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">kubectl get namespace</span><br><span class="line"></span><br><span class="line">kubectl run nginx --image&#x3D;nginx --namespace&#x3D;&lt;名字空间名称&gt;</span><br><span class="line">kubectl get pods --namespace&#x3D;&lt;名字空间名称&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">kubectl config set-context --current --namespace&#x3D;&lt;名字空间名称&gt;</span><br><span class="line"># 验证之</span><br><span class="line">kubectl config view | grep namespace:</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"># 位于名字空间中的资源</span><br><span class="line">kubectl api-resources --namespaced&#x3D;true</span><br><span class="line"></span><br><span class="line"># 不在名字空间中的资源</span><br><span class="line">kubectl api-resources --namespaced&#x3D;false</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: Namespace</span><br><span class="line">metadata:</span><br><span class="line">  name: &lt;insert-namespace-name-here&gt;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl create -f .&#x2F;my-namespace.yaml</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">kubectl create namespace &lt;insert-namespace-name-here&gt;</span><br><span class="line"></span><br><span class="line">kubectl delete namespaces &lt;insert-some-namespace-name&gt;</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>标签</strong></p>
+<p><em>标签（Labels）</em> 是附加到 Kubernetes 对象（比如 Pods）上的键值对。 标签旨在用于指定对用户有意义且相关的对象的标识属性，但不直接对核心系统有语义含义。 标签可以用于组织和选择对象的子集。标签可以在创建时附加到对象，随后可以随时添加和修改。 每个对象都可以定义一组键/值标签。每个键对于给定对象必须是唯一的。标签使用户能够以松散耦合的方式将他们自己的组织结构映射到系统对象，而无需客户端存储这些映射。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">"metadata": &#123;</span><br><span class="line">  "labels": &#123;</span><br><span class="line">    "key1" : "value1",</span><br><span class="line">    "key2" : "value2"</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: Pod</span><br><span class="line">metadata:</span><br><span class="line">  name: cuda-test</span><br><span class="line">spec:</span><br><span class="line">  containers:</span><br><span class="line">    - name: cuda-test</span><br><span class="line">      image: &quot;k8s.gcr.io&#x2F;cuda-vector-add:v0.1&quot;</span><br><span class="line">      resources:</span><br><span class="line">        limits:</span><br><span class="line">          nvidia.com&#x2F;gpu: 1</span><br><span class="line">  nodeSelector:</span><br><span class="line">    accelerator: nvidia-tesla-p100</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl get pods -l environment=production,tier=frontend</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>注解</strong></p>
+<p>你可以使用 Kubernetes 注解为对象附加任意的非标识的元数据。客户端程序（例如工具和库）能够获取这些元数据信息。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&quot;metadata&quot;: &#123;</span><br><span class="line">  &quot;annotations&quot;: &#123;</span><br><span class="line">    &quot;key1&quot; : &quot;value1&quot;,</span><br><span class="line">    &quot;key2&quot; : &quot;value2&quot;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: Pod</span><br><span class="line">metadata:</span><br><span class="line">  name: annotations-demo</span><br><span class="line">  annotations:</span><br><span class="line">    imageregistry: &quot;https:&#x2F;&#x2F;hub.docker.com&#x2F;&quot;</span><br><span class="line">spec:</span><br><span class="line">  containers:</span><br><span class="line">  - name: nginx</span><br><span class="line">    image: nginx:1.7.9</span><br><span class="line">    ports:</span><br><span class="line">    - containerPort: 80</span><br></pre></td></tr></table></figure>
+
+
+
+<p><strong>字段选择器</strong></p>
+<p><em>字段选择器（Field selectors</em>）允许你根据一个或多个资源字段的值 <a href="https://kubernetes.io/zh/docs/concepts/overview/working-with-objects/kubernetes-objects" target="_blank" rel="noopener">筛选 Kubernetes 资源</a>。 下面是一些使用字段选择器查询的例子：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl get pods --field-selector status.phase=Running</span><br></pre></td></tr></table></figure>
+
+
+
+<h5><span id="135-pods">1.3.5 Pods</span></h5><p><em>Pod</em> 是可以在 Kubernetes 中创建和管理的、最小的可部署的计算单元。    </p>
+<p><em>Pod</em> 是一组（一个或多个） <a href="https://kubernetes.io/zh/docs/concepts/overview/what-is-kubernetes/#why-containers" target="_blank" rel="noopener">容器</a>； 这些容器共享存储、网络、以及怎样运行这些容器的声明。</p>
+<p>Pod 的共享上下文包括一组 Linux 名字空间、控制组（cgroup）和可能一些其他的隔离 方面，即用来隔离 Docker 容器的技术。 在 Pod 的上下文中，每个独立的应用可能会进一步实施隔离。</p>
+<p>通常你不需要直接创建 Pod，甚至单实例 Pod。 相反，你会使用诸如 <a href="https://kubernetes.io/zh/docs/concepts/workloads/controllers/deployment/" target="_blank" rel="noopener">Deployment</a> 或 <a href="https://kubernetes.io/docs/concepts/workloads/controllers/jobs-run-to-completion" target="_blank" rel="noopener">Job</a> 这类工作负载资源 来创建 Pod。如果 Pod 需要跟踪状态， 可以考虑 <a href="https://kubernetes.io/zh/docs/concepts/workloads/controllers/statefulset/" target="_blank" rel="noopener">StatefulSet</a> 资源。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: batch&#x2F;v1</span><br><span class="line">kind: Job</span><br><span class="line">metadata:</span><br><span class="line">  name: hello</span><br><span class="line">spec:</span><br><span class="line">  template:</span><br><span class="line">    # 这里是 Pod 模版</span><br><span class="line">    spec:</span><br><span class="line">      containers:</span><br><span class="line">      - name: hello</span><br><span class="line">        image: busybox</span><br><span class="line">        command: [&#39;sh&#39;, &#39;-c&#39;, &#39;echo &quot;Hello, Kubernetes!&quot; &amp;&amp; sleep 3600&#39;]</span><br><span class="line">      restartPolicy: OnFailure</span><br><span class="line">    # 以上为 Pod 模版</span><br></pre></td></tr></table></figure>
+
+
+
+<h5><span id="136-service">1.3.6 Service</span></h5><p>Kubernetes 网络解决四方面的问题：</p>
+<ul>
+<li>一个 Pod 中的容器之间通过本地回路（loopback）通信。</li>
+<li>集群网络在不同 pod 之间提供通信。</li>
+<li>Service 资源允许你对外暴露 Pods 中运行的应用程序，以支持来自于集群外部的访问。</li>
+<li>可以使用 Services 来发布仅供集群内部使用的服务。</li>
+</ul>
+<p>Kubernetes Service 定义了这样一种抽象：逻辑上的一组 Pod，一种可以访问它们的策略 —— 通常称为微服务。 这一组 Pod 能够被 Service 访问到，通常是通过 <a href="https://kubernetes.io/zh/docs/concepts/overview/working-with-objects/labels/" target="_blank" rel="noopener">选择算符</a> （查看<a href="https://kubernetes.io/zh/docs/concepts/services-networking/service/#services-without-selectors" target="_blank" rel="noopener">下面</a>了解，为什么你可能需要没有 selector 的 Service）实现的。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: Service</span><br><span class="line">metadata:</span><br><span class="line">  name: my-service</span><br><span class="line">spec:</span><br><span class="line">  selector:</span><br><span class="line">    app: MyApp</span><br><span class="line">  ports:</span><br><span class="line">    - protocol: TCP</span><br><span class="line">      port: 80</span><br><span class="line">      targetPort: 9376</span><br></pre></td></tr></table></figure>
+
+
+
+<h5><span id="137-deploments">1.3.7 Deploments</span></h5><p>Deployment 会创建一个 ReplicaSet 以确保所需数量的 Pod 始终可用，并指定替换 Pod 的策略 （例如 <a href="https://kubernetes.io/zh/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment" target="_blank" rel="noopener">RollingUpdate</a>)， 除了一些显式的<a href="https://kubernetes.io/zh/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy" target="_blank" rel="noopener"><code>restartPolicy: Never</code></a> 场景之外，几乎总是优先考虑直接创建 Pod。 <a href="https://kubernetes.io/zh/docs/concepts/workloads/controllers/job/" target="_blank" rel="noopener">Job</a> 也可能是合适的。</p>
+<h4><span id="14-存储">1.4 存储</span></h4><p>1.4.1 卷</p>
+<p>容器中的文件在磁盘上是临时存放的，这给容器中运行的特殊应用程序带来一些问题。 首先，当容器崩溃时，kubelet 将重新启动容器，容器中的文件将会丢失——因为容器会以干净的状态重建。 其次，当在一个 <code>Pod</code> 中同时运行多个容器时，常常需要在这些容器之间共享文件。 Kubernetes 抽象出 <code>Volume</code> 对象来解决这两个问题。</p>
+<h3><span id="2-使用-minikube-安装-kubernetes">2 使用 Minikube 安装 Kubernetes</span></h3><p>  Minikube 是一种可以让你在本地轻松运行 Kubernetes 的工具。 Minikube 在笔记本电脑上的虚拟机（VM）中运行单节点 Kubernetes 集群， 供那些希望尝试 Kubernetes 或进行日常开发的用户使用。</p>
+<h4><span id="21-安装条件与准备">2.1 安装条件与准备</span></h4><ol>
+<li>检查你的 Linux 是否支持虚拟化技术</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">grep -E --color 'vmx|svm' /proc/cpuinfo</span><br></pre></td></tr></table></figure>
+
+<p>  2.安装Minikube</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br></pre></td><td class="code"><pre><span class="line">#安装wget</span><br><span class="line">yum install -y wget</span><br><span class="line"></span><br><span class="line">#备份基础源</span><br><span class="line">mv &#x2F;etc&#x2F;yum.repos.d&#x2F;CentOS-Base.repo &#x2F;etc&#x2F;yum.repos.d&#x2F;CentOS-Base.repo_bak</span><br><span class="line"></span><br><span class="line">#获取阿里源</span><br><span class="line">wget -O &#x2F;etc&#x2F;yum.repos.d&#x2F;CentOS-Base.repo http:&#x2F;&#x2F;mirrors.aliyun.com&#x2F;repo&#x2F;Centos-7.repo</span><br><span class="line"></span><br><span class="line">#获取epel阿里源</span><br><span class="line">wget https:&#x2F;&#x2F;mirrors.aliyun.com&#x2F;repo&#x2F;epel-7.repo</span><br><span class="line"></span><br><span class="line">#清理缓存</span><br><span class="line">yum clan all</span><br><span class="line">yum makecache</span><br><span class="line">yum repolist</span><br><span class="line"></span><br><span class="line">#安装网络工具</span><br><span class="line">yum install -y net-tools</span><br><span class="line"></span><br><span class="line">#添加sudo用户</span><br><span class="line">sudo useradd -s &#x2F;bin&#x2F;bash -d &#x2F;home&#x2F;lining -m lining</span><br><span class="line">echo &quot;lining ALL&#x3D;(ALL) NOPASSWD: ALL&quot; | sudo tee &#x2F;etc&#x2F;sudoers.d&#x2F;lining</span><br><span class="line">sudo su - lining</span><br><span class="line"></span><br><span class="line">#安装yum工具</span><br><span class="line">sudo yum install -y yum-utils</span><br><span class="line"></span><br><span class="line">#添加docker源</span><br><span class="line">sudo yum-config-manager \</span><br><span class="line">    --add-repo \</span><br><span class="line">    https:&#x2F;&#x2F;download.docker.com&#x2F;linux&#x2F;centos&#x2F;docker-ce.repo</span><br><span class="line"></span><br><span class="line">#安装docker</span><br><span class="line">sudo yum -y install docker-ce docker-ce-cli containerd.io</span><br><span class="line"></span><br><span class="line">#修改docker镜像源</span><br><span class="line">sudo mkdir -p &#x2F;etc&#x2F;docker</span><br><span class="line">sudo vi &#x2F;etc&#x2F;docker&#x2F;daemon.json</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">  &quot;registry-mirrors&quot;:[&quot;http:&#x2F;&#x2F;hub-mirror.c.163.com&quot;],</span><br><span class="line">  &quot;storage-driver&quot;:&quot;devicemapper&quot;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">#启动docker</span><br><span class="line">sudo systemctl start docker</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">#添加kubectl源</span><br><span class="line">vi &#x2F;etc&#x2F;yum.repos.d&#x2F;kubernetes.repo</span><br><span class="line"></span><br><span class="line">[kubernetes]</span><br><span class="line">name&#x3D;Kubernetes</span><br><span class="line">baseurl&#x3D;https:&#x2F;&#x2F;mirrors.aliyun.com&#x2F;kubernetes&#x2F;yum&#x2F;repos&#x2F;kubernetes-el7-x86_64&#x2F;</span><br><span class="line">enabled&#x3D;1</span><br><span class="line">gpgcheck&#x3D;1</span><br><span class="line">repo_gpgcheck&#x3D;1</span><br><span class="line">gpgkey&#x3D;https:&#x2F;&#x2F;mirrors.aliyun.com&#x2F;kubernetes&#x2F;yum&#x2F;doc&#x2F;yum-key.gpg https:&#x2F;&#x2F;mirrors.aliyun.com&#x2F;kubernetes&#x2F;yum&#x2F;doc&#x2F;rpm-package-key.gpg</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">#安装kubectl</span><br><span class="line">sudo yum -y install kubectl</span><br><span class="line"></span><br><span class="line">kubectl version --client</span><br><span class="line"></span><br><span class="line">#安装minikube</span><br><span class="line">curl -Lo minikube https:&#x2F;&#x2F;kubernetes.oss-cn-hangzhou.aliyuncs.com&#x2F;minikube&#x2F;releases&#x2F;v1.13.0&#x2F;minikube-linux-amd64 </span><br><span class="line"></span><br><span class="line">chmod +x minikube</span><br><span class="line">sudo mv minikube &#x2F;usr&#x2F;local&#x2F;bin&#x2F;</span><br><span class="line"></span><br><span class="line">#添加当前用户到docker组</span><br><span class="line">sudo usermod -aG docker $USER &amp;&amp; newgrp docker</span><br><span class="line"></span><br><span class="line">#启动minikube</span><br><span class="line">minikube start --vm-driver&#x3D;docker --image-repository&#x3D;registry.cn-hangzhou.aliyuncs.com&#x2F;google_containers</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">* minikube v1.13.0 on Centos 7.8.2003</span><br><span class="line">* Using the docker driver based on user configuration</span><br><span class="line">* Using image repository registry.cn-hangzhou.aliyuncs.com&#x2F;google_containers</span><br><span class="line">* Starting control plane node minikube in cluster minikube</span><br><span class="line">* Pulling base image ...</span><br><span class="line">* Creating docker container (CPUs&#x3D;2, Memory&#x3D;2200MB) ...</span><br><span class="line">* Preparing Kubernetes v1.19.0 on Docker 19.03.8 ...</span><br><span class="line">    &gt; kubectl.sha256: 65 B &#x2F; 65 B [--------------------------] 100.00% ? p&#x2F;s 0s</span><br><span class="line">    &gt; kubelet.sha256: 65 B &#x2F; 65 B [--------------------------] 100.00% ? p&#x2F;s 0s</span><br><span class="line">    &gt; kubeadm.sha256: 65 B &#x2F; 65 B [--------------------------] 100.00% ? p&#x2F;s 0s</span><br><span class="line">    &gt; kubeadm: 37.30 MiB &#x2F; 37.30 MiB [---------------] 100.00% 14.66 MiB p&#x2F;s 3s</span><br><span class="line">    &gt; kubectl: 41.01 MiB &#x2F; 41.01 MiB [----------------] 100.00% 6.23 MiB p&#x2F;s 7s</span><br><span class="line">    &gt; kubelet: 104.88 MiB &#x2F; 104.88 MiB [------------] 100.00% 10.37 MiB p&#x2F;s 10s</span><br><span class="line">* Verifying Kubernetes components...</span><br><span class="line">* Enabled addons: default-storageclass, storage-provisioner</span><br><span class="line">* Done! kubectl is now configured to use &quot;minikube&quot; by default</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">#常用命令</span><br><span class="line">minikube status</span><br><span class="line"></span><br><span class="line">minikube version</span><br><span class="line"></span><br><span class="line">kubectl cluster-info</span><br><span class="line"></span><br><span class="line">#安装dashboard</span><br><span class="line">minikube dashboard</span><br><span class="line"></span><br><span class="line">systemctl stop firewalld</span><br><span class="line"></span><br><span class="line">systemctl disable firewalld</span><br><span class="line"></span><br><span class="line">kubectl proxy --port&#x3D;8001 --address&#x3D;&#39;192.168.67.25&#39; --accept-hosts&#x3D;&#39;^.*&#39; &amp;</span><br><span class="line"></span><br><span class="line">http:&#x2F;&#x2F;192.168.67.25:8001&#x2F;api&#x2F;v1&#x2F;namespaces&#x2F;kubernetes-dashboard&#x2F;services&#x2F;http:kubernetes-dashboard:&#x2F;proxy&#x2F;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">kubectl create deployment hello-minikube --image&#x3D;k8s.gcr.io&#x2F;echoserver:1.10</span><br><span class="line"></span><br><span class="line">kubectl create deployment hello-node --image&#x3D;k8s.gcr.io&#x2F;echoserver:1.4</span><br><span class="line"></span><br><span class="line">kubectl get deployments</span><br><span class="line"></span><br><span class="line">kubectl get pods</span><br><span class="line"></span><br><span class="line">kubectl get events</span><br><span class="line"></span><br><span class="line">kubectl config view</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">kubectl expose deployment hello-node --type&#x3D;LoadBalancer --port&#x3D;8080</span><br><span class="line"></span><br><span class="line">kubectl get services</span><br><span class="line"></span><br><span class="line">minikube service hello-minikube --url</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">minikube service hello-node</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">kubectl delete services hello-minikube</span><br><span class="line">kubectl delete deployment hello-minikube</span><br></pre></td></tr></table></figure>
+
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
+              <a href="/tags/Minikube/" rel="tag"># Minikube</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/08/19/ClickHouse%E5%AE%89%E8%A3%85/" rel="prev" title="ClickHouse安装">
+      <i class="fa fa-chevron-left"></i> ClickHouse安装
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/02/24/Java%E5%AE%89%E5%85%A8/" rel="next" title="Java 安全">
+      Java 安全 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#"><span class="nav-number">1.</span> <span class="nav-text">1 Kubernetes基本概念</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 应用部署历史形态</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.2.</span> <span class="nav-text">1.2 Kubernetes 功能</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.3.</span> <span class="nav-text">1.3 Kubernetes 组件</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#"><span class="nav-number">1.3.1.</span> <span class="nav-text">1.3.1 主节点上运行控制平面组件</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#"><span class="nav-number">1.3.2.</span> <span class="nav-text">1.3.2 工作节点运行Node所需组件</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#"><span class="nav-number">1.3.3.</span> <span class="nav-text">1.3.3 客户端</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#"><span class="nav-number">1.3.4.</span> <span class="nav-text">1.3.4 Kubenetes对象</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#"><span class="nav-number">1.3.5.</span> <span class="nav-text">1.3.5 Pods</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#"><span class="nav-number">1.3.6.</span> <span class="nav-text">1.3.6 Service</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#"><span class="nav-number">1.3.7.</span> <span class="nav-text">1.3.7 Deploments</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.4.</span> <span class="nav-text">1.4 存储</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#"><span class="nav-number">2.</span> <span class="nav-text">2 使用 Minikube 安装 Kubernetes</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 安装条件与准备</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">李宁</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">21</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">29</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">李宁</span>
+</div>
+  <div class="powered-by">万物之始，大道至简
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">知易行难，悟在天成
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
