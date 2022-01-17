@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"localhost","root":"/","scheme":"Muse","version":"7.7.2","exturl":false,"sidebar":{"position":"left","display":"hide","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="负载均衡的选择 4层（TCP）负载   7层（HTTP）负载 SSL问题 Haproxy与Nginx LVS 基于NAT的LVS 基于TUN的LVS 基于DR的LVS   Squid Nginx HAProxy HAProxy安装   Keepalived Keepalived 虚拟路由冗余协议 Keepalived安装         负载均衡的选择根据流量的情况与复杂度，选择使用用第4层">
+<meta property="og:type" content="article">
+<meta property="og:title" content="负载均衡与高可用">
+<meta property="og:url" content="http://localhost:4000/2020/03/17/%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1%E5%92%8C%E9%AB%98%E5%8F%AF%E7%94%A8/index.html">
+<meta property="og:site_name" content="李宁的博客">
+<meta property="og:description" content="负载均衡的选择 4层（TCP）负载   7层（HTTP）负载 SSL问题 Haproxy与Nginx LVS 基于NAT的LVS 基于TUN的LVS 基于DR的LVS   Squid Nginx HAProxy HAProxy安装   Keepalived Keepalived 虚拟路由冗余协议 Keepalived安装         负载均衡的选择根据流量的情况与复杂度，选择使用用第4层">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-03-16T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-01-17T01:38:39.071Z">
+<meta property="article:author" content="李宁">
+<meta property="article:tag" content="LVS">
+<meta property="article:tag" content="Nginx">
+<meta property="article:tag" content="HAProxy">
+<meta property="article:tag" content="Keepalived">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://localhost:4000/2020/03/17/%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1%E5%92%8C%E9%AB%98%E5%8F%AF%E7%94%A8/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true
+  };
+</script>
+
+  <title>负载均衡与高可用 | 李宁的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">李宁的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://localhost:4000/2020/03/17/%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1%E5%92%8C%E9%AB%98%E5%8F%AF%E7%94%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="李宁">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="李宁的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          负载均衡与高可用
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-03-17 00:00:00" itemprop="dateCreated datePublished" datetime="2020-03-17T00:00:00+08:00">2020-03-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-01-17 09:38:39" itemprop="dateModified" datetime="2022-01-17T09:38:39+08:00">2022-01-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1%E4%B8%8E%E9%AB%98%E5%8F%AF%E7%94%A8/" itemprop="url" rel="index"><span itemprop="name">负载均衡与高可用</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <!-- toc -->
+
+<ul>
+<li><a href="#负载均衡的选择">负载均衡的选择</a><ul>
+<li><a href="#4层tcp负载">4层（TCP）负载</a></li>
+</ul>
+</li>
+<li><a href="#7层http负载">7层（HTTP）负载</a></li>
+<li><a href="#ssl问题">SSL问题</a></li>
+<li><a href="#haproxy与nginx">Haproxy与Nginx</a></li>
+<li><a href="#lvs">LVS</a><ul>
+<li><a href="#基于nat的lvs">基于NAT的LVS</a></li>
+<li><a href="#基于tun的lvs">基于TUN的LVS</a></li>
+<li><a href="#基于dr的lvs">基于DR的LVS</a></li>
+</ul>
+</li>
+<li><a href="#squid">Squid</a></li>
+<li><a href="#nginx">Nginx</a></li>
+<li><a href="#haproxy">HAProxy</a><ul>
+<li><a href="#haproxy安装">HAProxy安装</a></li>
+</ul>
+</li>
+<li><a href="#keepalived">Keepalived</a><ul>
+<li><a href="#keepalived-1">Keepalived</a><ul>
+<li><a href="#虚拟路由冗余协议">虚拟路由冗余协议</a></li>
+<li><a href="#keepalived安装">Keepalived安装</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<!-- tocstop -->
+
+<hr>
+<h4><span id="负载均衡的选择">负载均衡的选择</span></h4><p>根据流量的情况与复杂度，选择使用用第4层或第7层这两种负载均衡方案，这两种是针对不同场景的方案，所以在对负载均衡设备配置决策之前，需要清楚自己的需求很重要。</p>
+<p>4层：LVS Haproxy Nginx<br>7层：Haproxy Nginx<br>硬件：F5</p>
+<h5><span id="4层tcp负载">4层（TCP）负载</span></h5><p>优点：它是通过修改每个分组报头的目地IP和MAC地址部分，然后将其转发到可用的服务器节点之一，4层负载处理速度比7层快。<br>缺点：4层负载也有缺点，灵活性较差，且要求每个服务器都要部署相同的应用组件。</p>
+<p>适用于功能简单不太复杂的应用</p>
+<h4><span id="7层http负载">7层（HTTP）负载</span></h4><p>使用7层负载平衡，可能需要更多的计算能力来处理，比如较高的CPU和内存，但它为大型和复杂的网站提供的回报是值得付出的。7层负载均衡类型允许我们把每个组件分离到不同的服务器上，而且这些机器亦对用户透明。</p>
+<h4><span id="ssl问题">SSL问题</span></h4><p>4层负载：若是SSL数据包直接扔给给应用服务器，它只是做转发。<br>7层负载：SSL在负载平衡设备上进行处理</p>
+<h4><span id="haproxy与nginx">Haproxy与Nginx</span></h4><p>HAProxyCPU和内存占用极小，这意味着它可以媲美硬件。对于大多数情况，HAProxy是一个非常合适的选择如果你需要更多的能力和灵活性，可以选择Nginx，虽然Nginx占用的内存和CPU略高一些。</p>
+<h4><span id="lvs">LVS</span></h4><h5><span id="基于nat的lvs">基于NAT的LVS</span></h5><h5><span id="基于tun的lvs">基于TUN的LVS</span></h5><h5><span id="基于dr的lvs">基于DR的LVS</span></h5><h4><span id="squid">Squid</span></h4><p>常用于正向代理，是一款web缓存代理软件，缓存呢绒常放于内存或者磁盘，因此对内存或者磁盘的性能要求较高Nvme SSD</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">yum -y install squid</span><br><span class="line">systemctl start squid</span><br><span class="line">systemctl <span class="built_in">enable</span> squid</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">vi /etc/squid/squid.conf</span><br></pre></td></tr></table></figure>
+
+
+<h4><span id="nginx">Nginx</span></h4><p>Nginx可以作为后端的HTTP服务器，也可以作为反向代理和负载均衡服务器，Nginx可以提供基于七层的负载均衡方案，可以使用轮询、IP哈希、URL哈希等方式调度后端服务器，同时支持对后端服务器的健康检查。</p>
+<p>正向代理：代理的是客户端 squid，正向代理中，proxy和client同属一个LAN，对server透明。正向代理用途是为了在防火墙内的局域网提供访问internet的途径。另外还可以使用缓冲特性减少网络使用率<br>反向代理：代理的是服务端 nginx，反向代理中，proxy和server同属一个LAN，对client透明。反向代理的用途是将防火墙后面的服务器提供给internet用户访问。同时还可以完成诸如负载均衡等功能</p>
+<p>使用Vmvare为虚拟机添加两张网卡，Nginx一般添加两个Ip，一个外网IP，另一个内网IP.</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">ip addr</span><br><span class="line"></span><br><span class="line"><span class="built_in">cd</span> /etc/sysconfig/network-scripts/</span><br><span class="line"></span><br><span class="line">cp ifcfg-ens33 ifcfg-ens37</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">vi ifcfg-ens37</span><br><span class="line">修改Ip，网卡名字，UUID等信息</span><br></pre></td></tr></table></figure>
+
+<p>安装httpd服务</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">yum -y install httpd</span><br><span class="line"><span class="built_in">echo</span> <span class="string">"192.168.67.26"</span> &gt; /var/www/html/index.html</span><br><span class="line"></span><br><span class="line">其中修改httpd的端口</span><br><span class="line">vi /etc/httpd/conf/httd.conf </span><br><span class="line"></span><br><span class="line">systemctl start httpd</span><br><span class="line"></span><br><span class="line">systemctl <span class="built_in">enable</span> httpd</span><br></pre></td></tr></table></figure>
+
+<p>安装Nginx服务</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">yum -y install gcc pcre pcre-devel openssl openssl-devel zlib-devel gd gd-devel perl perl-ExtUtils-Embed</span><br><span class="line"></span><br><span class="line">tar -zxvf nginx-1.17.9.tar.gz -C /usr/src/</span><br><span class="line"></span><br><span class="line"><span class="built_in">cd</span> /usr/src/nginx-1.17.9</span><br><span class="line"></span><br><span class="line">./configure --prefix=/usr/<span class="built_in">local</span>/nginx --with-ipv6 \</span><br><span class="line">--with-http_ssl_module \</span><br><span class="line">--with-http_ssl_module \</span><br><span class="line">--with-http_realip_module \</span><br><span class="line">--with-http_addition_module \</span><br><span class="line">--with-http_dav_module \</span><br><span class="line">--with-http_flv_module \</span><br><span class="line">--with-http_mp4_module \</span><br><span class="line">--with-http_gzip_static_module \</span><br><span class="line">--with-http_perl_module \</span><br><span class="line">--with-mail \</span><br><span class="line">--with-mail_ssl_module</span><br><span class="line"></span><br><span class="line">make &amp;&amp; make install</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">vi /usr/<span class="built_in">local</span>/nginx/conf/nginx.conf</span><br><span class="line"></span><br><span class="line">    error_log  logs/error.log  notice;</span><br><span class="line">    pid        logs/nginx.pid;</span><br><span class="line">    log_format  main  <span class="string">'$remote_addr - $remote_user [$time_local] "$request" '</span></span><br><span class="line">    supstream servers &#123;</span><br><span class="line">        server 192.168.67.24:8080 max_fails=3 fail_timeout=30s weight=2;</span><br><span class="line">        server 192.168.67.26:8080 max_fails=3 fail_timeout=30s weight=2;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    server &#123;</span><br><span class="line">        listen       80;</span><br><span class="line">        server_name  192.168.67.25;</span><br><span class="line"></span><br><span class="line">        <span class="comment">#charset koi8-r;</span></span><br><span class="line"></span><br><span class="line">        access_log  logs/host.access.log  main;</span><br><span class="line"></span><br><span class="line">        location / &#123;</span><br><span class="line">            proxy_pass http://servers;</span><br><span class="line">            proxy_cache one;</span><br><span class="line">            proxy_set_header X-Forwarded-For <span class="variable">$remote_addr</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">启动Nginx</span><br><span class="line"></span><br><span class="line">/usr/<span class="built_in">local</span>/nginx/sbin/nginx</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">tailf /usr/<span class="built_in">local</span>/nginx/logs/error.log</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">重新加载配置/usr/<span class="built_in">local</span>/nginx/sbin/nginx -s reload</span><br></pre></td></tr></table></figure>
+
+<p>添加开机启动</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /lib/systemd/system/</span><br><span class="line">vi nginx.service</span><br><span class="line"></span><br><span class="line">[Unit]</span><br><span class="line">Description=nginx service</span><br><span class="line">After=network.target </span><br><span class="line">   </span><br><span class="line">[Service] </span><br><span class="line">Type=forking </span><br><span class="line">ExecStart=/usr/<span class="built_in">local</span>/nginx/sbin/nginx</span><br><span class="line">ExecReload=/usr/<span class="built_in">local</span>/nginx/sbin/nginx -s reload</span><br><span class="line">ExecStop=/usr/<span class="built_in">local</span>/nginx/sbin/nginx -s quit</span><br><span class="line">PrivateTmp=<span class="literal">true</span> </span><br><span class="line">   </span><br><span class="line">[Install] </span><br><span class="line">WantedBy=multi-user.target</span><br><span class="line"></span><br><span class="line">systemctl <span class="built_in">enable</span> nginx</span><br></pre></td></tr></table></figure>
+<p>开放Nginx端口</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">firewall-cmd  --zone=public  --add-port=80/tcp --permanent</span><br><span class="line">firewall-cmd  --zone=public  --add-port=8080/tcp --permanent</span><br><span class="line">firewall-cmd --reload</span><br><span class="line">firewall-cmd --list-ports</span><br></pre></td></tr></table></figure>
+
+<p>移除应用端口</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">firewall-cmd  --zone=public  --remove-port=8099/tcp --permanent</span><br><span class="line">firewall-cmd --reload</span><br><span class="line">firewall-cmd --list-ports</span><br></pre></td></tr></table></figure>
+
+<h4><span id="haproxy">HAProxy</span></h4><h5><span id="haproxy安装">HAProxy安装</span></h5><p>yum安装</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">yum install haproxy</span><br><span class="line"></span><br><span class="line">vi /etc/haproxy/haproxy.cfg</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">vi /etc/rsyslog.conf</span><br><span class="line"></span><br><span class="line"><span class="variable">$ModLoad</span> imudp</span><br><span class="line"><span class="variable">$UDPServerRun</span> 514</span><br><span class="line"></span><br><span class="line">local2.*                       /var/<span class="built_in">log</span>/haproxy.log</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">systemctl restart rsyslog</span><br></pre></td></tr></table></figure>
+
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#---------------------------------------------------------------------</span></span><br><span class="line"><span class="comment"># Example configuration for a possible web application.  See the</span></span><br><span class="line"><span class="comment"># full configuration options online.</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment">#   http://haproxy.1wt.eu/download/1.4/doc/configuration.txt</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment">#---------------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#---------------------------------------------------------------------</span></span><br><span class="line"><span class="comment"># Global settings</span></span><br><span class="line"><span class="comment">#---------------------------------------------------------------------</span></span><br><span class="line">global</span><br><span class="line">    <span class="comment"># to have these messages end up in /var/log/haproxy.log you will</span></span><br><span class="line">    <span class="comment"># need to:</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line">    <span class="comment"># 1) configure syslog to accept network log events.  This is done</span></span><br><span class="line">    <span class="comment">#    by adding the '-r' option to the SYSLOGD_OPTIONS in</span></span><br><span class="line">    <span class="comment">#    /etc/sysconfig/syslog</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line">    <span class="comment"># 2) configure local2 events to go to the /var/log/haproxy.log</span></span><br><span class="line">    <span class="comment">#   file. A line like the following can be added to</span></span><br><span class="line">    <span class="comment">#   /etc/sysconfig/syslog</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line">    <span class="comment">#    local2.*                       /var/log/haproxy.log</span></span><br><span class="line">    <span class="comment">#</span></span><br><span class="line">    <span class="built_in">log</span>         127.0.0.1 local2</span><br><span class="line"></span><br><span class="line">    chroot      /var/lib/haproxy</span><br><span class="line">    pidfile     /var/run/haproxy.pid</span><br><span class="line">    maxconn     4000</span><br><span class="line">    user        haproxy</span><br><span class="line">    group       haproxy</span><br><span class="line">    daemon</span><br><span class="line">    debug</span><br><span class="line">    <span class="comment"># turn on stats unix socket</span></span><br><span class="line">    stats socket /var/lib/haproxy/stats</span><br><span class="line"></span><br><span class="line"><span class="comment">#---------------------------------------------------------------------</span></span><br><span class="line"><span class="comment"># common defaults that all the 'listen' and 'backend' sections will</span></span><br><span class="line"><span class="comment"># use if not designated in their block</span></span><br><span class="line"><span class="comment">#---------------------------------------------------------------------</span></span><br><span class="line">defaults</span><br><span class="line">    mode                    http</span><br><span class="line">    <span class="built_in">log</span>                     global</span><br><span class="line">    option                  httplog</span><br><span class="line">    option                  dontlognull</span><br><span class="line">    option http-server-close</span><br><span class="line">    option forwardfor       except 127.0.0.0/8</span><br><span class="line">    option                  redispatch</span><br><span class="line">    retries                 3</span><br><span class="line">    timeout http-request    10s</span><br><span class="line">    timeout queue           1m</span><br><span class="line">    timeout connect         10s</span><br><span class="line">    timeout client          1m</span><br><span class="line">    timeout server          1m</span><br><span class="line">    timeout http-keep-alive 10s</span><br><span class="line">    timeout check           10s</span><br><span class="line">    maxconn                 3000</span><br><span class="line"></span><br><span class="line"><span class="comment">#---------------------------------------------------------------------</span></span><br><span class="line"><span class="comment"># main frontend which proxys to the backends</span></span><br><span class="line"><span class="comment">#---------------------------------------------------------------------</span></span><br><span class="line">frontend  http-in</span><br><span class="line">    <span class="built_in">bind</span> *:80</span><br><span class="line">    stats uri /haproxy/stats</span><br><span class="line">    acl healthpro url_beg /up/health/getSystemEnums</span><br><span class="line">    acl healthtest url_beg /up/health/isAuth</span><br><span class="line">    use_backend static <span class="keyword">if</span> healthpro</span><br><span class="line">    use_backend app <span class="keyword">if</span> healthtest</span><br><span class="line">    default_backend  app</span><br><span class="line"></span><br><span class="line"><span class="comment">#---------------------------------------------------------------------</span></span><br><span class="line"><span class="comment"># static backend for serving up images, stylesheets and such</span></span><br><span class="line"><span class="comment">#---------------------------------------------------------------------</span></span><br><span class="line">backend static</span><br><span class="line">    balance     roundrobin</span><br><span class="line">    server      node1     192.168.67.130:8096</span><br><span class="line"></span><br><span class="line"><span class="comment">#---------------------------------------------------------------------</span></span><br><span class="line"><span class="comment"># round robin balancing between the various backends</span></span><br><span class="line"><span class="comment">#---------------------------------------------------------------------</span></span><br><span class="line">backend app</span><br><span class="line">    balance     roundrobin</span><br><span class="line">    server      srv1     192.168.67.130:8095</span><br></pre></td></tr></table></figure>
+
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">global</span><br><span class="line">    chroot      /var/lib/haproxy</span><br><span class="line">    pidfile     /var/run/haproxy.pid</span><br><span class="line">    maxconn     4000</span><br><span class="line">    user        haproxy</span><br><span class="line">    group       haproxy</span><br><span class="line">    daemon</span><br><span class="line">    stats socket /var/lib/haproxy/stats</span><br><span class="line">defaults</span><br><span class="line">    mode                    http</span><br><span class="line">    timeout connect         5000ms</span><br><span class="line">    timeout client          50000ms</span><br><span class="line">    timeout server          50000ms</span><br><span class="line">frontend http-in</span><br><span class="line">    <span class="built_in">bind</span> *:80</span><br><span class="line">    default_backend servers</span><br><span class="line"></span><br><span class="line">acl badboys src 192.168.0.0/24</span><br><span class="line">acl example_acl hdr_reg(host) -i ^(www.example.com|web.example.com)$</span><br><span class="line">block <span class="keyword">if</span> badboys</span><br><span class="line">use_backend servers_2 <span class="keyword">if</span> example_acl</span><br><span class="line">    default_backend servers_1</span><br><span class="line">backend servers_1</span><br><span class="line">    server server1 127.0.0.1:8000 maxconn 32</span><br><span class="line">backend servers_2</span><br><span class="line">    server server1 127.0.0.1:8000 maxconn 3</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">检查配置文件</span><br><span class="line">haproxy -c -f /etc/haproxy/haproxy.cfg</span><br><span class="line"></span><br><span class="line">systemctl restart haproxy</span><br><span class="line"></span><br><span class="line">重启加载配置文件</span><br><span class="line">haproxy -f /etc/haproxy/haproxy.cfg</span><br></pre></td></tr></table></figure>
+
+
+<p>编译安装</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h4><span id="keepalived">Keepalived</span></h4><p>Keepalived是一款基于Linux的负载均衡以及高可用软件。</p>
+<h5><span id="keepalived">Keepalived</span></h5><p>Keepalived通过虚拟路由冗余协议(Virtual Router Redundancy Protocol，VRRP)实现高可用架构，通过IP虚拟服务器（IP Virtual Server，IPVS）实现负载均衡，实际生产环境中往往使用Keepalived实现高可用。  </p>
+<h6><span id="虚拟路由冗余协议">虚拟路由冗余协议</span></h6><p>VRRP是路由灾备的实现基础，VRRP实现再主设备发生故障时将业务自动切换到从设备，对用户是透明的。VRRP将两台或者多台路由设备虚拟成一个设备，对外仅提供一个虚拟的路由IP地址（Virtual IP, VIP）,同一时刻有且只有一台主设备拥有该IP，其它的成为从设备</p>
+<p>案列（1）<br>一个局域网络内的所有主机都设置缺省网关，这样主机发出的目的地址不在本网段的报文将被通过缺省网关发往三层交换机，从而实现了主机和外部网络的通信。当缺省路由器down掉（即端口关闭）之后，内部主机将无法与外部通信，如果路由器设置了VRRP时，那么这时，虚拟路由将启用备份路由器，从而实现全网通信。  </p>
+<p>主从选择：<br>VRRP为每一个路由设备定义一个虚拟路由ID(VRID)以及设备优先级别（0~255），所有主路由设备的BRID必须一样并组成一个虚拟路由设备组，组内的路由设备有限级别高的会被选为主路由设备，优先级相等的IP地址越大优先级越高。如果VIP地址设置为某个主路由的设备的地址，那么该设备永远处于主设备状态。  </p>
+<h6><span id="keepalived安装">Keepalived安装</span></h6><p>安装包安装</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">yum -y install gcc openssl-devel popt-devel libnl libnl-devel kernel-devel ipvsadm</span><br><span class="line"></span><br><span class="line">tar -zxvf keepalived-2.0.20.tar.gz -C /usr/src/</span><br><span class="line"></span><br><span class="line"><span class="built_in">cd</span> /usr/src/keepalived-2.0.20</span><br><span class="line"></span><br><span class="line">./configure</span><br><span class="line"></span><br><span class="line">make &amp;&amp; make install</span><br><span class="line"></span><br><span class="line">ln -s /usr/<span class="built_in">local</span>/etc/keepalived/ /etc</span><br><span class="line">ln -s /usr/<span class="built_in">local</span>/etc/rc.d/init.d/keepalived /etc/init.d/</span><br><span class="line">ln -s /usr/<span class="built_in">local</span>/etc/sysconfig/keepalived /etc/sysconfig/</span><br><span class="line">ln -s /usr/<span class="built_in">local</span>/sbin/keepalived /usr/sbin</span><br><span class="line"></span><br><span class="line">或者</span><br><span class="line">./configure --prefix=/usr/<span class="built_in">local</span>/keepalived</span><br><span class="line"></span><br><span class="line">make &amp;&amp; make install</span><br><span class="line"></span><br><span class="line">ln -s /usr/<span class="built_in">local</span>/keepalived/etc/keepalived/conf /etc/keepalived</span><br><span class="line">ln -s /usr/<span class="built_in">local</span>/keepalived/sbin/keepalived /usr/sbin/keepalived</span><br><span class="line">ln -s /usr/<span class="built_in">local</span>/keepalived/rc.d/init.d/keepalived /etc/init.d/</span><br></pre></td></tr></table></figure>
+
+<p>yum源安装</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">yum -y install keepalived</span><br><span class="line">vi /etc/keepalived/keepalived.conf</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">global_defs &#123;</span><br><span class="line">   notification_email &#123;</span><br><span class="line">     liningwonder@153.com</span><br><span class="line">   &#125;</span><br><span class="line">   notification_email_from lining@unionpaysmart.com</span><br><span class="line">   smtp_server smtp.qiye.163.com</span><br><span class="line">   smtp_connect_timeout 30</span><br><span class="line">   router_id nginx_master</span><br><span class="line">   vrrp_skip_check_adv_addr</span><br><span class="line">   vrrp_strict</span><br><span class="line">   vrrp_garp_interval 0</span><br><span class="line">   vrrp_gna_interval 0</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">vrrp_instance VI_1 &#123;</span><br><span class="line">    state MASTER</span><br><span class="line">    interface ens33</span><br><span class="line">    virtual_router_id 66</span><br><span class="line">    priority 100</span><br><span class="line">    advert_int 1</span><br><span class="line">    authentication &#123;</span><br><span class="line">        auth_type PASS</span><br><span class="line">        auth_pass 1111</span><br><span class="line">    &#125;</span><br><span class="line">    virtual_ipaddress &#123;</span><br><span class="line">        192.168.67.200</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">global_defs &#123;</span><br><span class="line">   notification_email &#123;</span><br><span class="line">     liningwonder@153.com</span><br><span class="line">   &#125;</span><br><span class="line">   notification_email_from lining@unionpaysmart.com</span><br><span class="line">   smtp_server smtp.qiye.163.com</span><br><span class="line">   smtp_connect_timeout 30</span><br><span class="line">   router_id nginx_slave</span><br><span class="line">   vrrp_skip_check_adv_addr</span><br><span class="line">   vrrp_strict</span><br><span class="line">   vrrp_garp_interval 0</span><br><span class="line">   vrrp_gna_interval 0</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">vrrp_instance VI_1 &#123;</span><br><span class="line">    state BACKUP</span><br><span class="line">    interface ens33</span><br><span class="line">    virtual_router_id 66</span><br><span class="line">    priority 99</span><br><span class="line">    advert_int 1</span><br><span class="line">    authentication &#123;</span><br><span class="line">        auth_type PASS</span><br><span class="line">        auth_pass 1111</span><br><span class="line">    &#125;</span><br><span class="line">    virtual_ipaddress &#123;</span><br><span class="line">        192.168.67.200</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Nginx检查脚本</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"><span class="comment">#检测nginx是否启动了</span></span><br><span class="line">A=`ps -C nginx --no-header |wc -l`        </span><br><span class="line"><span class="keyword">if</span> [ <span class="variable">$A</span> -eq 0 ];<span class="keyword">then</span>    <span class="comment">#如果nginx没有启动就启动nginx                        </span></span><br><span class="line">      systemctl restart nginx                <span class="comment">#重启nginx</span></span><br><span class="line">      <span class="keyword">if</span> [ `ps -C nginx --no-header |wc -l` -eq 0 ];<span class="keyword">then</span>    <span class="comment">#nginx重启失败，则停掉keepalived服务，进行VIP转移</span></span><br><span class="line">              systemctl stop keepalived                    </span><br><span class="line">      <span class="keyword">fi</span></span><br><span class="line"><span class="keyword">fi</span></span><br></pre></td></tr></table></figure>
+
+
+
+<p>Niginx需要监听虚拟IP</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">server_name  192.168.67.200;</span><br></pre></td></tr></table></figure>
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/LVS/" rel="tag"># LVS</a>
+              <a href="/tags/Nginx/" rel="tag"># Nginx</a>
+              <a href="/tags/HAProxy/" rel="tag"># HAProxy</a>
+              <a href="/tags/Keepalived/" rel="tag"># Keepalived</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/03/17/CentOS/" rel="prev" title="CentOS">
+      <i class="fa fa-chevron-left"></i> CentOS
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/03/17/Hadoop%E6%BA%90%E7%A0%81%E7%BC%96%E8%AF%91/" rel="next" title="Hadoop源码编译">
+      Hadoop源码编译 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.</span> <span class="nav-text">负载均衡的选择</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#"><span class="nav-number">1.1.</span> <span class="nav-text">4层（TCP）负载</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">2.</span> <span class="nav-text">7层（HTTP）负载</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">3.</span> <span class="nav-text">SSL问题</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">4.</span> <span class="nav-text">Haproxy与Nginx</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">5.</span> <span class="nav-text">LVS</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#"><span class="nav-number">5.1.</span> <span class="nav-text">基于NAT的LVS</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#"><span class="nav-number">5.2.</span> <span class="nav-text">基于TUN的LVS</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#"><span class="nav-number">5.3.</span> <span class="nav-text">基于DR的LVS</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">6.</span> <span class="nav-text">Squid</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">7.</span> <span class="nav-text">Nginx</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">8.</span> <span class="nav-text">HAProxy</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#"><span class="nav-number">8.1.</span> <span class="nav-text">HAProxy安装</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">9.</span> <span class="nav-text">Keepalived</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#"><span class="nav-number">9.1.</span> <span class="nav-text">Keepalived</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#"><span class="nav-number">9.1.1.</span> <span class="nav-text">虚拟路由冗余协议</span></a></li><li class="nav-item nav-level-6"><a class="nav-link" href="#"><span class="nav-number">9.1.2.</span> <span class="nav-text">Keepalived安装</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">李宁</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">39</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">71</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">李宁</span>
+</div>
+  <div class="powered-by">万物之始，大道至简
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">知易行难，悟在天成
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

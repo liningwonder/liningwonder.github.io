@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"localhost","root":"/","scheme":"Muse","version":"7.7.2","exturl":false,"sidebar":{"position":"left","display":"hide","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Cloudera CDH 大数据平台安装手册 1. 硬件资源及集群规划 2. 操作系统及软件版本 3. 基础环境设置 4. 安装与配置       Cloudera CDH 大数据平台安装手册1. 硬件资源及集群规划硬件资源      其他参考值      角色 内存和处理器要求    Hadoop JournalNode 1 GB (default) 1 core minimum   Ha">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Cloudera CDH 大数据平台安装手册">
+<meta property="og:url" content="http://localhost:4000/2020/03/18/cdh/index.html">
+<meta property="og:site_name" content="李宁的博客">
+<meta property="og:description" content="Cloudera CDH 大数据平台安装手册 1. 硬件资源及集群规划 2. 操作系统及软件版本 3. 基础环境设置 4. 安装与配置       Cloudera CDH 大数据平台安装手册1. 硬件资源及集群规划硬件资源      其他参考值      角色 内存和处理器要求    Hadoop JournalNode 1 GB (default) 1 core minimum   Ha">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://localhost:4000/images/cdh-hard-require.png">
+<meta property="og:image" content="http://localhost:4000/images/cdh-permission.png">
+<meta property="og:image" content="http://localhost:4000/images/cdh-install-version.png">
+<meta property="og:image" content="http://localhost:4000/images/cdh-preview.png">
+<meta property="og:image" content="http://localhost:4000/images/cdh-node.png">
+<meta property="og:image" content="http://localhost:4000/images/cdh-yum-repo.png">
+<meta property="og:image" content="http://localhost:4000/images/cdh-parcel.png">
+<meta property="og:image" content="http://localhost:4000/images/cdh-check.png">
+<meta property="og:image" content="http://localhost:4000/images/cdh-choose1.png">
+<meta property="og:image" content="http://localhost:4000/images/cdh-js.png">
+<meta property="og:image" content="http://localhost:4000/images/cdh-mysql.png">
+<meta property="og:image" content="http://localhost:4000/images/cdh-install.png">
+<meta property="article:published_time" content="2020-03-17T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-01-17T01:38:39.068Z">
+<meta property="article:author" content="李宁">
+<meta property="article:tag" content="Cloudera">
+<meta property="article:tag" content="CDH">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://localhost:4000/images/cdh-hard-require.png">
+
+<link rel="canonical" href="http://localhost:4000/2020/03/18/cdh/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true
+  };
+</script>
+
+  <title>Cloudera CDH 大数据平台安装手册 | 李宁的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">李宁的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://localhost:4000/2020/03/18/cdh/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="李宁">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="李宁的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Cloudera CDH 大数据平台安装手册
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-03-18 00:00:00" itemprop="dateCreated datePublished" datetime="2020-03-18T00:00:00+08:00">2020-03-18</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-01-17 09:38:39" itemprop="dateModified" datetime="2022-01-17T09:38:39+08:00">2022-01-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/CDH/" itemprop="url" rel="index"><span itemprop="name">CDH</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <!-- toc -->
+
+<ul>
+<li><a href="#cloudera-cdh-大数据平台安装手册">Cloudera CDH 大数据平台安装手册</a><ul>
+<li><a href="#1-硬件资源及集群规划">1. 硬件资源及集群规划</a></li>
+<li><a href="#2-操作系统及软件版本">2. 操作系统及软件版本</a></li>
+<li><a href="#3-基础环境设置">3. 基础环境设置</a></li>
+<li><a href="#4-安装与配置">4. 安装与配置</a></li>
+</ul>
+</li>
+</ul>
+<!-- tocstop -->
+
+<hr>
+<h2><span id="cloudera-cdh-大数据平台安装手册">Cloudera CDH 大数据平台安装手册</span></h2><h4><span id="1-硬件资源及集群规划">1. 硬件资源及集群规划</span></h4><p>硬件资源  </p>
+<img src="/images/cdh-hard-require.png" width="74%" height="75%">
+
+
+<p>其他参考值  </p>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>内存和处理器要求</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Hadoop JournalNode</td>
+<td>1 GB (default) 1 core minimum</td>
+</tr>
+<tr>
+<td>Hadoop NameNode</td>
+<td>1 GB (for proof-of-concept deployments) Minimum of 4 dedicated cores</td>
+</tr>
+<tr>
+<td>Hadoop DataNode</td>
+<td>Minimum: 4 GB Minimum: 4 cores</td>
+</tr>
+<tr>
+<td>HBase Master</td>
+<td>100-10,000 regions: 4 GB;  10,000 or more regions with 200 or more Region Servers: 8 GB Minimum 4</td>
+</tr>
+<tr>
+<td>HBase Region Server</td>
+<td>Minimum: 8 GB</td>
+</tr>
+<tr>
+<td>Thrift Server</td>
+<td>1 GB - 4 GB</td>
+</tr>
+<tr>
+<td>HiveServer 2</td>
+<td>Single Connection    4 GB； 2-10 connections    4-6 GB; 11-20 connections    6-12 GB; 21-40; connections    12-16 GB</td>
+</tr>
+<tr>
+<td>Hive Metastore</td>
+<td>Single Connection    4 GB; 2-10 connections    4-10 GB; 11-20 connections    10-12 GB; 21-40 connections    12-16 GB</td>
+</tr>
+<tr>
+<td>Hive-on-Spark</td>
+<td>Minimum: 16 GB Recommended: 32 GB for larger data sizes Recommended: 8 cores for larger data sizes</td>
+</tr>
+<tr>
+<td>Spark History Server</td>
+<td>Minimum: 512 MB</td>
+</tr>
+<tr>
+<td>Job History Server</td>
+<td>Minimum: 1 GB Minimum: 1 core</td>
+</tr>
+<tr>
+<td>NodeManager</td>
+<td>Minimum: 1 GB Minimum: 8-16 cores</td>
+</tr>
+<tr>
+<td>ResourceManager</td>
+<td>Minimum: 1 GB Minimum: 1 core</td>
+</tr>
+<tr>
+<td>ZooKeeper Server</td>
+<td>Minimum: 1 GB Minimum: 4 cores</td>
+</tr>
+</tbody></table>
+<p>集群规划示例  </p>
+<table>
+<thead>
+<tr>
+<th>节点</th>
+<th>角色</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>bigdata21</td>
+<td>CM HBase REST HMS HS2 JHS HS HttpFs</td>
+</tr>
+<tr>
+<td>bigdata22</td>
+<td>HM RS DN NN NM RM ZK</td>
+</tr>
+<tr>
+<td>bigdata23</td>
+<td>RS DN SNN NM ZK HDFS Balancer</td>
+</tr>
+<tr>
+<td>bigdata24</td>
+<td>RS DN NM ZK Spark Gateway</td>
+</tr>
+<tr>
+<td>bigdata25</td>
+<td>RS DN NM WebHCat Hive GateWay</td>
+</tr>
+<tr>
+<td>bigdata26</td>
+<td>RS DN NM S2S NFS Gateway</td>
+</tr>
+</tbody></table>
+<h4><span id="2-操作系统及软件版本">2. 操作系统及软件版本</span></h4><table>
+<thead>
+<tr>
+<th>软件</th>
+<th>版本</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>OS</td>
+<td>CentOS 7.X</td>
+<td></td>
+</tr>
+<tr>
+<td>CM</td>
+<td>5.16.2</td>
+<td></td>
+</tr>
+<tr>
+<td>CDH</td>
+<td>5.16.2</td>
+<td></td>
+</tr>
+<tr>
+<td>JDK</td>
+<td>8u181</td>
+<td>需要替换java.security授权文件</td>
+</tr>
+<tr>
+<td>MySQL</td>
+<td>5.7.27</td>
+<td></td>
+</tr>
+</tbody></table>
+<h4><span id="3-基础环境设置">3. 基础环境设置</span></h4><p>(1) hostname及hosts配置（每个节点执行）  </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo hostnamectl <span class="built_in">set</span>-hostname “bigdata21”</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">vi /etc/hosts</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">x.x.x.21 bigdata21</span><br><span class="line">x.x.x.22 bigdata22</span><br><span class="line">x.x.x.23 bigdata23</span><br><span class="line">x.x.x.24 bigdata24</span><br><span class="line">x.x.x.25 bigdata25</span><br><span class="line">x.x.x.26 bigdata26</span><br></pre></td></tr></table></figure>
+
+<p>(2) 禁用SELinux（每个节点执行）  </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">setenforce 0</span><br><span class="line"></span><br><span class="line">vi /etc/selinux/config</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">SELINUX=disabled</span><br></pre></td></tr></table></figure>
+
+<p>(3) 关闭防火墙（每个节点执行）  </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">systemctl stop firewalld</span><br><span class="line">systemctl <span class="built_in">disable</span> firewalld</span><br></pre></td></tr></table></figure>
+
+<p>(4) 卸载chrony（每个节点执行）</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum -y remove chrony</span><br></pre></td></tr></table></figure>
+
+
+<p>(5) 安装ntp并配置同步（每个节点执行）  </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">yum -y install ntp</span><br><span class="line">vi /etc/ntp.conf</span><br></pre></td></tr></table></figure>
+
+<p>x.x.x.21 作为NTP服务器，配置</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">server  127.127.1.0 </span><br><span class="line">fudge  127.127.1.0 stratum 10</span><br></pre></td></tr></table></figure>
+
+
+<p>其他节点</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">server x.x.x.21</span><br></pre></td></tr></table></figure>
+
+<p>重启  </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">systemctl restart ntpd</span><br><span class="line">systemctl <span class="built_in">enable</span> ntpd</span><br></pre></td></tr></table></figure>
+
+<p>确认同步  </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ntpq -p</span><br></pre></td></tr></table></figure>
+
+<p>(6) 设置swap（每个节点执行）  </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> vm.swappiness = 10 &gt;&gt; /etc/sysctl.conf</span><br><span class="line">sysctl vm.swappiness=10</span><br></pre></td></tr></table></figure>
+
+<p>(7) 设置透明大页面（每个节点执行）  </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> never &gt; /sys/kernel/mm/transparent_hugepage/defrag</span><br><span class="line"><span class="built_in">echo</span> never &gt; /sys/kernel/mm/transparent_hugepage/enabled</span><br><span class="line">vi /etc/rc.d/rc.local</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> <span class="built_in">test</span> -f /sys/kernel/mm/transparent_hugepage/enabled; <span class="keyword">then</span> </span><br><span class="line"><span class="built_in">echo</span> never &gt; /sys/kernel/mm/transparent_hugepage/enabled </span><br><span class="line"><span class="keyword">fi</span> </span><br><span class="line"><span class="keyword">if</span> <span class="built_in">test</span> -f /sys/kernel/mm/transparent_hugepage/defrag; <span class="keyword">then</span> </span><br><span class="line"><span class="built_in">echo</span> never &gt; /sys/kernel/mm/transparent_hugepage/defrag </span><br><span class="line"><span class="keyword">fi</span></span><br></pre></td></tr></table></figure>
+
+<p>(8) 安装http服务（CM节点执行）  </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sudo yum -y install httpd</span><br><span class="line">systemctl start httpd</span><br><span class="line">systemctl stop httpd</span><br></pre></td></tr></table></figure>
+
+<p>(9) 安装MySQL并初始化</p>
+<p>mysql安装请参考前面的博客。各节点上传MySQL JDBC驱动到/usr/share/java/</p>
+<p>(10) 制作yum源  </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">/var/www/html/cm5.16.2</span><br><span class="line">/var/www/html/cdh5.16.2</span><br><span class="line"></span><br><span class="line">请事先下载CM5.16.2和CM5.16.2的安装包</span><br><span class="line">使用 createrepo . 生成rpm元数据</span><br><span class="line">测试HTTP是否能够访问</span><br><span class="line"></span><br><span class="line">vi /etc/yum.repos.d/cm.repo</span><br><span class="line"></span><br><span class="line">[cmrepo]</span><br><span class="line">name = cm_repo</span><br><span class="line">baseurl = http://x.x.x.21/cm5.16.2</span><br><span class="line"><span class="built_in">enable</span> = <span class="literal">true</span></span><br><span class="line">gpgcheck = <span class="literal">false</span></span><br></pre></td></tr></table></figure>
+
+<h4><span id="4-安装与配置">4. 安装与配置</span></h4><p>(1) 安装配置启动CM  </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">yum -y install cloudera-manager-server</span><br><span class="line"></span><br><span class="line">usr/share/cmf/schema/scm_prepare_database.sh mysql cm cm </span><br><span class="line"></span><br><span class="line">systemctl start cloudera-scm-server</span><br></pre></td></tr></table></figure>
+
+<p>（2）根据CM引导界面添加配置集群  </p>
+<p>界面地址：<a href="http://222.85.230.62:7180" target="_blank" rel="noopener">http://222.85.230.62:7180</a></p>
+<p>默认用户密码：admin/admin</p>
+<p>许可条款<br><img src="/images/cdh-permission.png" width="100%" height="100%"><br>部署版本<br><img src="/images/cdh-install-version.png" width="100%" height="100%"><br>安装预览<br><img src="/images/cdh-preview.png" width="100%" height="100%"><br>指定主机节点<br><img src="/images/cdh-node.png" width="100%" height="100%"><br>配置自定义yum源地址<br><img src="/images/cdh-yum-repo.png" width="100%" height="100%"><br>安装parcel<br><img src="/images/cdh-parcel.png" width="100%" height="100%"><br>检查主机<br><img src="/images/cdh-check.png" width="100%" height="100%"><br>选择安装的服务<br><img src="/images/cdh-choose1.png" width="100%" height="100%"><br>角色分配<br><img src="/images/cdh-js.png" width="100%" height="100%"><br>配置hive和am的数据库信息<br><img src="/images/cdh-mysql.png" width="100%" height="100%"><br>安装服务<br><img src="/images/cdh-install.png" width="100%" height="100%"></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Cloudera/" rel="tag"># Cloudera</a>
+              <a href="/tags/CDH/" rel="tag"># CDH</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/03/17/Hadoop%E5%AE%89%E8%A3%85/" rel="prev" title="Hadoop源码编译">
+      <i class="fa fa-chevron-left"></i> Hadoop源码编译
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/03/23/mapreduce/" rel="next" title="MapReduce任务提交脚本">
+      MapReduce任务提交脚本 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#"><span class="nav-number">1.</span> <span class="nav-text">Cloudera CDH 大数据平台安装手册</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.0.1.</span> <span class="nav-text">1. 硬件资源及集群规划</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.0.2.</span> <span class="nav-text">2. 操作系统及软件版本</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.0.3.</span> <span class="nav-text">3. 基础环境设置</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.0.4.</span> <span class="nav-text">4. 安装与配置</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">李宁</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">39</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">71</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">李宁</span>
+</div>
+  <div class="powered-by">万物之始，大道至简
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">知易行难，悟在天成
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

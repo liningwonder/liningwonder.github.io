@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"localhost","root":"/","scheme":"Muse","version":"7.7.2","exturl":false,"sidebar":{"position":"left","display":"hide","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Alluxio JNI-FUSE 挂载源码分析 fuse_main   libjnifuse.so 将源码编译为libfuse.so 源码解析 jnifuse_impls.h &amp; jnifuse_impls.cc jnifuse_fs.h &amp; jnifuse_fs.h       SUSE Example-hello.c       Alluxio JNI-FUSE挂载源码分">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Alluxio JNI-FUSE">
+<meta property="og:url" content="http://localhost:4000/2021/07/08/Alluxio%20JNI-FUSE/index.html">
+<meta property="og:site_name" content="李宁的博客">
+<meta property="og:description" content="Alluxio JNI-FUSE 挂载源码分析 fuse_main   libjnifuse.so 将源码编译为libfuse.so 源码解析 jnifuse_impls.h &amp; jnifuse_impls.cc jnifuse_fs.h &amp; jnifuse_fs.h       SUSE Example-hello.c       Alluxio JNI-FUSE挂载源码分">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-07-07T16:00:00.000Z">
+<meta property="article:modified_time" content="2021-07-08T10:37:22.201Z">
+<meta property="article:author" content="李宁">
+<meta property="article:tag" content="Alluxio">
+<meta property="article:tag" content="JNI">
+<meta property="article:tag" content="FUSE">
+<meta property="article:tag" content="JNI-FUSE">
+<meta property="article:tag" content="Java-Fuse">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://localhost:4000/2021/07/08/Alluxio%20JNI-FUSE/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true
+  };
+</script>
+
+  <title>Alluxio JNI-FUSE | 李宁的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">李宁的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://localhost:4000/2021/07/08/Alluxio%20JNI-FUSE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="李宁">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="李宁的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Alluxio JNI-FUSE
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-07-08 00:00:00 / 修改时间：18:37:22" itemprop="dateCreated datePublished" datetime="2021-07-08T00:00:00+08:00">2021-07-08</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Alluxio-JNI-FUSE/" itemprop="url" rel="index"><span itemprop="name">Alluxio JNI-FUSE</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <!-- toc -->
+
+<ul>
+<li><a href="#alluxio-jni-fuse">Alluxio JNI-FUSE</a><ul>
+<li><a href="#挂载源码分析">挂载源码分析</a><ul>
+<li><a href="#fuse_main">fuse_main</a></li>
+</ul>
+</li>
+<li><a href="#libjnifuseso">libjnifuse.so</a><ul>
+<li><a href="#将源码编译为libfuseso">将源码编译为libfuse.so</a></li>
+<li><a href="#源码解析">源码解析</a><ul>
+<li><a href="#jnifuse_implsh-jnifuse_implscc">jnifuse_impls.h &amp; jnifuse_impls.cc</a></li>
+<li><a href="#jnifuse_fsh-jnifuse_fsh">jnifuse_fs.h &amp; jnifuse_fs.h</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#suse">SUSE</a><ul>
+<li><a href="#example-helloc">Example-hello.c</a></li>
+</ul>
+</li>
+</ul>
+<!-- tocstop -->
+
+<hr>
+<h2><span id="alluxio-jni-fuse">Alluxio JNI-FUSE</span></h2><h3><span id="挂载源码分析">挂载源码分析</span></h3><hr>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#96;$ .&#x2F;bin&#x2F;alluxio-fuse.sh umount mount_point&#96;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line">#!&#x2F;usr&#x2F;bin&#x2F;env bash</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">mount_fuse() &#123;</span><br><span class="line">  local mount_point&#x3D;$1</span><br><span class="line">  local alluxio_root&#x3D;$2</span><br><span class="line">  local full_mount_option&#x3D;&quot;&quot;</span><br><span class="line">  if [[ ! -z &quot;$&#123;mount_option&#125;&quot; ]]; then</span><br><span class="line">    full_mount_option&#x3D;&quot;big_writes,$&#123;mount_option&#125;&quot;</span><br><span class="line">  else</span><br><span class="line">    full_mount_option&#x3D;&quot;big_writes&quot;</span><br><span class="line">  fi</span><br><span class="line"></span><br><span class="line">  if [[ $&#123;NO_DAEMON&#125; -eq &quot;1&quot; ]]; then</span><br><span class="line">    ALLUXIO_FUSE_JAVA_OPTS+&#x3D;&quot; -Dalluxio.logger.type&#x3D;FUSE_LOGGER,Console&quot;</span><br><span class="line">  fi</span><br><span class="line"></span><br><span class="line">  local cmd&#x3D;&quot;$&#123;JAVA&#125; -cp $&#123;CLASSPATH&#125; $&#123;JAVA_OPTS&#125; $&#123;ALLUXIO_FUSE_JAVA_OPTS&#125; \</span><br><span class="line">    alluxio.fuse.AlluxioFuse \</span><br><span class="line">    -o $&#123;full_mount_option&#125; \</span><br><span class="line">    -m $&#123;mount_point&#125; \</span><br><span class="line">    -r $&#123;alluxio_root&#125;&quot;</span><br><span class="line">  echo &quot;Starting AlluxioFuse process: mounting alluxio path \&quot;$&#123;alluxio_root&#125;\&quot; to local mount point \&quot;$&#123;mount_point&#125;\&quot; with options&#x3D;\&quot;$&#123;full_mount_option&#125;\&quot;&quot;</span><br><span class="line">  if [[ $&#123;NO_DAEMON&#125; -eq &quot;1&quot; ]]; then</span><br><span class="line">    exec $&#123;cmd&#125;</span><br><span class="line">  else</span><br><span class="line">    (nohup $&#123;cmd&#125; &gt; $&#123;ALLUXIO_LOGS_DIR&#125;&#x2F;fuse.out 2&gt;&amp;1) &amp;</span><br><span class="line">    # sleep: workaround to let the bg java process exit on errors, if any</span><br><span class="line">    sleep 2s</span><br><span class="line">    if kill -0 $! &gt; &#x2F;dev&#x2F;null 2&gt;&amp;1 ; then</span><br><span class="line">      echo &quot;Successfully mounted Alluxio path \&quot;$&#123;alluxio_root&#125;\&quot; to $&#123;mount_point&#125;.&quot;</span><br><span class="line">      echo &quot;See $&#123;ALLUXIO_LOGS_DIR&#125;&#x2F;fuse.log for logging messages&quot;</span><br><span class="line">      return 0</span><br><span class="line">    else</span><br><span class="line">      echo &quot;Failed to mount Alluxio path \&quot;$&#123;alluxio_root&#125;\&quot; to $&#123;mount_point&#125;.&quot;</span><br><span class="line">      echo &quot;See $&#123;ALLUXIO_LOGS_DIR&#125;&#x2F;fuse.out for more details&quot;</span><br><span class="line">      return 1</span><br><span class="line">    fi</span><br><span class="line">  fi</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">umount_fuse() &#123;</span><br><span class="line">  local mount_point&#x3D;$1</span><br><span class="line">  local fuse_pid&#x3D;$(fuse_stat | awk &#39;&#123;print $1,$2&#125;&#39; | grep -w $&#123;mount_point&#125; | awk &#39;&#123;print $1&#125;&#39;)</span><br><span class="line">  if [[ -z $&#123;fuse_pid&#125; ]]; then</span><br><span class="line">    echo &quot;$&#123;mount_point&#125; not mounted&quot; &gt;&amp;2</span><br><span class="line">    return 1</span><br><span class="line">  else</span><br><span class="line">    echo &quot;Unmount fuse at $&#123;mount_point&#125; (PID: $&#123;fuse_pid&#125;).&quot;</span><br><span class="line">    kill $&#123;fuse_pid&#125;</span><br><span class="line">    return $?</span><br><span class="line">  fi</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>会执行到</p>
+<p>alluxio.fuse.AlluxioFuse</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">try &#123;</span><br><span class="line">          LOG.info(&quot;Mounting AlluxioJniFuseFileSystem: mount point&#x3D;\&quot;&#123;&#125;\&quot;, OPTIONS&#x3D;\&quot;&#123;&#125;\&quot;&quot;,</span><br><span class="line">              opts.getMountPoint(), fuseOpts.toArray(new String[0]));</span><br><span class="line">          fuseFs.mount(true, opts.isDebug(), fuseOpts.toArray(new String[0]));</span><br><span class="line">        &#125; catch (FuseException e) &#123;</span><br><span class="line">          LOG.error(&quot;Failed to mount &#123;&#125;&quot;, opts.getMountPoint(), e);</span><br><span class="line">          &#x2F;&#x2F; only try to umount file system when exception occurred.</span><br><span class="line">          &#x2F;&#x2F; jni-fuse registers JVM shutdown hook to ensure fs.umount()</span><br><span class="line">          &#x2F;&#x2F; will be executed when this process is exiting.</span><br><span class="line">          fuseFs.umount();</span><br><span class="line">        &#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>AlluxioJniFuseFileSystem -&gt; alluxio.jnifuse.AbstractFuseFileSystem</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">public abstract class AbstractFuseFileSystem implements FuseFileSystem &#123;</span><br><span class="line"></span><br><span class="line">  static &#123;</span><br><span class="line">    System.loadLibrary(&quot;jnifuse&quot;);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line">      if (SecurityUtils.canHandleShutdownHooks()) &#123;</span><br><span class="line">        Runtime.getRuntime().addShutdownHook(new Thread(this::umount));</span><br><span class="line">      &#125;</span><br><span class="line">      int res;</span><br><span class="line">      if (blocking) &#123;</span><br><span class="line">        res &#x3D; execMount(args);</span><br><span class="line">      &#125; else &#123;</span><br><span class="line">        try &#123;</span><br><span class="line">          res &#x3D; CompletableFuture.supplyAsync(() -&gt; execMount(args)).get(MOUNT_TIMEOUT_MS,</span><br><span class="line">              TimeUnit.MILLISECONDS);</span><br><span class="line">        &#125; catch (TimeoutException e) &#123;</span><br><span class="line">          &#x2F;&#x2F; ok</span><br><span class="line">          res &#x3D; 0;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">      if (res !&#x3D; 0) &#123;</span><br><span class="line">        throw new FuseException(&quot;Unable to mount FS, return code &#x3D; &quot; + res);</span><br><span class="line">      &#125;</span><br><span class="line">      </span><br><span class="line">      </span><br><span class="line">  private int execMount(String[] arg) &#123;</span><br><span class="line">    return libFuse.fuse_main_real(this, arg.length, arg);</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>alluxio.jnifuse.LibFuse</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">public class LibFuse &#123;</span><br><span class="line"></span><br><span class="line">  public native int fuse_main_real(AbstractFuseFileSystem fs, int argc, String[] argv);</span><br><span class="line"></span><br><span class="line">  public native ByteBuffer fuse_get_context();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>fuse_main_real 会调用Fuse库的 fuse_main_real(argc, argv, op, sizeof(*(op)), user_data) </p>
+<h5><span id="fuse_main">fuse_main</span></h5><hr>
+<p>1.先打开设备文件/dev/fuse；<br>2.然后挂载FUSE文件系统；<br>3.产生FUSE文件系统指针；<br>4.初始化FUSE文件系统的操作函数集：<br>5.初始化信号处理函数集；<br>6.进入等待循环： </p>
+<p>fuse_setup_common()函数调用fuse_new_common（lib/fuse.c）,fuse_new_common()函数分配fuse数据结构，存储并维护一个文件系统数据镜像缓存cached，返回到fuse_main()。</p>
+<p>在用户态程序调用fuse_main() （lib/helper.c）时，先调用fuse_setup_common()该函数先解析用户态程序传递过来的参数，然后调用fuse_mount_common()（该函数是fuse_kern_mount()函数的封装，lib/mount.c）。 </p>
+<p>fuse_kern_mount()通过/dev/fuse返回文件句柄给fuse_kern_chan_new()负责处理内核数据，然后返回到fuse_mount_common()函数。</p>
+<p>fuse_setup_common()函数调用fuse_new_common（lib/fuse.c）,fuse_new_common()函数分配fuse数据结构，存储并维护一个文件系统数据镜像缓存cached，返回到fuse_main()。</p>
+<p>fuse_kern_mount()函数中调用fuse_mount_fusermount()使用socketpair()创建一个UNIX域套接字，然后使用创建子进程执行fusermount程序，将FUSE_COMMFD_ENV环境变量中套接字的一端传递给它。</p>
+<p>fusermount（util/fusermount.c）确保fuse 模块已经被加载，然后打开/dev/fuse并通过一个UNIX套接字发送文件处理句柄。父进程等待子进程执行完毕回收，然后返回fuse_mount_fusermount()函数。</p>
+<p>最后，fuse_main()调用fuse_loop（lib/fuse.c）或者fuse_loop_mt()（lib/fuse_mt.c），这两个函数都可以从设备/dev/fuse读取文件系统调用，调用fuse_main()之前调用存储在fuse_operations结构体中的用户态函数。这些调用的结果回写到/dev/fuse设备（这个设备可以转发给系统调用）</p>
+<h3><span id="libjnifuseso">libjnifuse.so</span></h3><hr>
+<p>Linux下查看so包含的方法</p>
+<p>nm -D libjnifuse.so &gt; listmethod.txt</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br></pre></td><td class="code"><pre><span class="line">                 w __cxa_finalize</span><br><span class="line">                 U exit</span><br><span class="line">                 U fprintf</span><br><span class="line">                 U free</span><br><span class="line">                 U fuse_get_context</span><br><span class="line">                 U fuse_main_real</span><br><span class="line">                 w __gmon_start__</span><br><span class="line">                 U __gxx_personality_v0</span><br><span class="line">                 w _ITM_deregisterTMCloneTable</span><br><span class="line">                 w _ITM_registerTMCloneTable</span><br><span class="line">000000000000572d T Java_alluxio_jnifuse_FuseFillDir_fill</span><br><span class="line">00000000000057a8 T Java_alluxio_jnifuse_LibFuse_fuse_1get_1context</span><br><span class="line">0000000000005595 T Java_alluxio_jnifuse_LibFuse_fuse_1main_1real</span><br><span class="line">                 U malloc</span><br><span class="line">                 U pthread_getspecific</span><br><span class="line">                 U pthread_key_create</span><br><span class="line">                 U pthread_setspecific</span><br><span class="line">                 U stderr</span><br><span class="line">                 U _Unwind_Resume</span><br><span class="line">0000000000007f9b T _Z12open_wrapperPKcP14fuse_file_info</span><br><span class="line">0000000000007fcf T _Z12read_wrapperPKcPcmlP14fuse_file_info</span><br><span class="line">0000000000007eb0 T _Z13chmod_wrapperPKcj</span><br><span class="line">0000000000007f0d T _Z13flush_wrapperPKcP14fuse_file_info</span><br><span class="line">0000000000007f6f T _Z13mkdir_wrapperPKcj</span><br><span class="line">00000000000080c9 T _Z13rmdir_wrapperPKc</span><br><span class="line">0000000000008115 T _Z13write_wrapperPKcS0_mlP14fuse_file_info</span><br><span class="line">0000000000007edc T _Z14create_wrapperPKcjP14fuse_file_info</span><br><span class="line">000000000000809b T _Z14rename_wrapperPKcS0_</span><br><span class="line">00000000000080ef T _Z14unlink_wrapperPKc</span><br><span class="line">0000000000007f3b T _Z15getattr_wrapperPKcP4stat</span><br><span class="line">000000000000801e T _Z15readdir_wrapperPKcPvPFiS1_S0_PK4statlElP14fuse_file_info</span><br><span class="line">000000000000806d T _Z15release_wrapperPKcP14fuse_file_info</span><br><span class="line">                 U _ZdlPv</span><br><span class="line">00000000000060a4 W _ZN7JavaVM_19DetachCurrentThreadEv</span><br><span class="line">00000000000060c6 W _ZN7JavaVM_27AttachCurrentThreadAsDaemonEPPvS0_</span><br><span class="line">000000000000793e W _ZN7JNIEnv_11GetMethodIDEP7_jclassPKcS3_</span><br><span class="line">0000000000006044 W _ZN7JNIEnv_12NewGlobalRefEP8_jobject</span><br><span class="line">0000000000007a3c W _ZN7JNIEnv_12NewStringUTFEPKc</span><br><span class="line">0000000000007978 W _ZN7JNIEnv_13CallIntMethodEP8_jobjectP10_jmethodIDz</span><br><span class="line">0000000000007816 W _ZN7JNIEnv_14DeleteLocalRefEP8_jobject</span><br><span class="line">000000000000790e W _ZN7JNIEnv_14GetObjectClassEP8_jobject</span><br><span class="line">00000000000057e4 W _ZN7JNIEnv_17GetStringUTFCharsEP8_jstringPh</span><br><span class="line">0000000000005884 W _ZN7JNIEnv_19NewDirectByteBufferEPvl</span><br><span class="line">0000000000005850 W _ZN7JNIEnv_21GetObjectArrayElementEP13_jobjectArrayi</span><br><span class="line">000000000000581a W _ZN7JNIEnv_21ReleaseStringUTFCharsEP8_jstringPKc</span><br><span class="line">00000000000077e8 W _ZN7JNIEnv_9FindClassEPKc</span><br><span class="line">0000000000006074 W _ZN7JNIEnv_9GetJavaVMEPP7JavaVM_</span><br><span class="line">0000000000007848 W _ZN7JNIEnv_9NewObjectEP7_jclassP10_jmethodIDz</span><br><span class="line">0000000000006440 T _ZN7jnifuse13OpenOperation4callEPKcP14fuse_file_info</span><br><span class="line">0000000000006346 T _ZN7jnifuse13OpenOperationC1EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000006346 T _ZN7jnifuse13OpenOperationC2EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000007e36 W _ZN7jnifuse13OpenOperationD0Ev</span><br><span class="line">0000000000007e08 W _ZN7jnifuse13OpenOperationD1Ev</span><br><span class="line">0000000000007e08 W _ZN7jnifuse13OpenOperationD2Ev</span><br><span class="line">00000000000065f0 T _ZN7jnifuse13ReadOperation4callEPKcPcmlP14fuse_file_info</span><br><span class="line">00000000000064f6 T _ZN7jnifuse13ReadOperationC1EPNS_17JniFuseFileSystemE</span><br><span class="line">00000000000064f6 T _ZN7jnifuse13ReadOperationC2EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000007de2 W _ZN7jnifuse13ReadOperationD0Ev</span><br><span class="line">0000000000007db4 W _ZN7jnifuse13ReadOperationD1Ev</span><br><span class="line">0000000000007db4 W _ZN7jnifuse13ReadOperationD2Ev</span><br><span class="line">0000000000006f14 T _ZN7jnifuse14ChmodOperation4callEPKcj</span><br><span class="line">0000000000006e1a T _ZN7jnifuse14ChmodOperationC1EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000006e1a T _ZN7jnifuse14ChmodOperationC2EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000007c3e W _ZN7jnifuse14ChmodOperationD0Ev</span><br><span class="line">0000000000007c10 W _ZN7jnifuse14ChmodOperationD1Ev</span><br><span class="line">0000000000007c10 W _ZN7jnifuse14ChmodOperationD2Ev</span><br><span class="line">0000000000006bb4 T _ZN7jnifuse14FlushOperation4callEPKcP14fuse_file_info</span><br><span class="line">0000000000006aba T _ZN7jnifuse14FlushOperationC1EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000006aba T _ZN7jnifuse14FlushOperationC2EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000007ce6 W _ZN7jnifuse14FlushOperationD0Ev</span><br><span class="line">0000000000007cb8 W _ZN7jnifuse14FlushOperationD1Ev</span><br><span class="line">0000000000007cb8 W _ZN7jnifuse14FlushOperationD2Ev</span><br><span class="line">000000000000724a T _ZN7jnifuse14MkdirOperation4callEPKcj</span><br><span class="line">0000000000007150 T _ZN7jnifuse14MkdirOperationC1EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000007150 T _ZN7jnifuse14MkdirOperationC2EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000007b96 W _ZN7jnifuse14MkdirOperationD0Ev</span><br><span class="line">0000000000007b68 W _ZN7jnifuse14MkdirOperationD1Ev</span><br><span class="line">0000000000007b68 W _ZN7jnifuse14MkdirOperationD2Ev</span><br><span class="line">00000000000073c8 T _ZN7jnifuse14RmdirOperation4callEPKc</span><br><span class="line">00000000000072ce T _ZN7jnifuse14RmdirOperationC1EPNS_17JniFuseFileSystemE</span><br><span class="line">00000000000072ce T _ZN7jnifuse14RmdirOperationC2EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000007aee W _ZN7jnifuse14RmdirOperationD0Ev</span><br><span class="line">0000000000007ac0 W _ZN7jnifuse14RmdirOperationD1Ev</span><br><span class="line">0000000000007ac0 W _ZN7jnifuse14RmdirOperationD2Ev</span><br><span class="line">000000000000753e T _ZN7jnifuse14WriteOperation4callEPKcS2_mlP14fuse_file_info</span><br><span class="line">0000000000007444 T _ZN7jnifuse14WriteOperationC1EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000007444 T _ZN7jnifuse14WriteOperationC2EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000007a9a W _ZN7jnifuse14WriteOperationD0Ev</span><br><span class="line">0000000000007a6c W _ZN7jnifuse14WriteOperationD1Ev</span><br><span class="line">0000000000007a6c W _ZN7jnifuse14WriteOperationD2Ev</span><br><span class="line">0000000000007092 T _ZN7jnifuse15CreateOperation4callEPKcjP14fuse_file_info</span><br><span class="line">0000000000006f98 T _ZN7jnifuse15CreateOperationC1EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000006f98 T _ZN7jnifuse15CreateOperationC2EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000007bea W _ZN7jnifuse15CreateOperationD0Ev</span><br><span class="line">0000000000007bbc W _ZN7jnifuse15CreateOperationD1Ev</span><br><span class="line">0000000000007bbc W _ZN7jnifuse15CreateOperationD2Ev</span><br><span class="line">0000000000007738 T _ZN7jnifuse15RenameOperation4callEPKcS2_</span><br><span class="line">000000000000763e T _ZN7jnifuse15RenameOperationC1EPNS_17JniFuseFileSystemE</span><br><span class="line">000000000000763e T _ZN7jnifuse15RenameOperationC2EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000007b42 W _ZN7jnifuse15RenameOperationD0Ev</span><br><span class="line">0000000000007b14 W _ZN7jnifuse15RenameOperationD1Ev</span><br><span class="line">0000000000007b14 W _ZN7jnifuse15RenameOperationD2Ev</span><br><span class="line">0000000000006a3e T _ZN7jnifuse15UnlinkOperation4callEPKc</span><br><span class="line">0000000000006944 T _ZN7jnifuse15UnlinkOperationC1EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000006944 T _ZN7jnifuse15UnlinkOperationC2EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000007d3a W _ZN7jnifuse15UnlinkOperationD0Ev</span><br><span class="line">0000000000007d0c W _ZN7jnifuse15UnlinkOperationD1Ev</span><br><span class="line">0000000000007d0c W _ZN7jnifuse15UnlinkOperationD2Ev</span><br><span class="line">0000000000006290 T _ZN7jnifuse16GetattrOperation4callEPKcP4stat</span><br><span class="line">0000000000006196 T _ZN7jnifuse16GetattrOperationC1EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000006196 T _ZN7jnifuse16GetattrOperationC2EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000007e8a W _ZN7jnifuse16GetattrOperationD0Ev</span><br><span class="line">0000000000007e5c W _ZN7jnifuse16GetattrOperationD1Ev</span><br><span class="line">0000000000007e5c W _ZN7jnifuse16GetattrOperationD2Ev</span><br><span class="line">0000000000006836 T _ZN7jnifuse16ReaddirOperation4callEPKcPvPFiS3_S2_PK4statlElP14fuse_file_info</span><br><span class="line">00000000000066f0 T _ZN7jnifuse16ReaddirOperationC1EPNS_17JniFuseFileSystemE</span><br><span class="line">00000000000066f0 T _ZN7jnifuse16ReaddirOperationC2EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000007d8e W _ZN7jnifuse16ReaddirOperationD0Ev</span><br><span class="line">0000000000007d60 W _ZN7jnifuse16ReaddirOperationD1Ev</span><br><span class="line">0000000000007d60 W _ZN7jnifuse16ReaddirOperationD2Ev</span><br><span class="line">0000000000006d64 T _ZN7jnifuse16ReleaseOperation4callEPKcP14fuse_file_info</span><br><span class="line">0000000000006c6a T _ZN7jnifuse16ReleaseOperationC1EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000006c6a T _ZN7jnifuse16ReleaseOperationC2EPNS_17JniFuseFileSystemE</span><br><span class="line">0000000000007c92 W _ZN7jnifuse16ReleaseOperationD0Ev</span><br><span class="line">0000000000007c64 W _ZN7jnifuse16ReleaseOperationD1Ev</span><br><span class="line">0000000000007c64 W _ZN7jnifuse16ReleaseOperationD2Ev</span><br><span class="line">0000000000005f36 T _ZN7jnifuse17JniFuseFileSystem11getInstanceEv</span><br><span class="line">0000000000005e8c T _ZN7jnifuse17JniFuseFileSystem4initEP7JNIEnv_P8_jobject</span><br><span class="line">0000000000005f8a T _ZN7jnifuse17JniFuseFileSystem6getEnvEv</span><br><span class="line">0000000000006020 T _ZN7jnifuse17JniFuseFileSystem6getJVMEv</span><br><span class="line">0000000000006032 T _ZN7jnifuse17JniFuseFileSystem8getFSObjEv</span><br><span class="line">000000000000c408 B _ZN7jnifuse17JniFuseFileSystem8instanceE</span><br><span class="line">00000000000058f8 T _ZN7jnifuse17JniFuseFileSystemC1EP7JNIEnv_P8_jobject</span><br><span class="line">00000000000058f8 T _ZN7jnifuse17JniFuseFileSystemC2EP7JNIEnv_P8_jobject</span><br><span class="line">0000000000005c40 T _ZN7jnifuse17JniFuseFileSystemD1Ev</span><br><span class="line">0000000000005c40 T _ZN7jnifuse17JniFuseFileSystemD2Ev</span><br><span class="line">00000000000060f8 T _ZN7jnifuse9OperationC1Ev</span><br><span class="line">00000000000060f8 T _ZN7jnifuse9OperationC2Ev</span><br><span class="line">0000000000006170 T _ZN7jnifuse9OperationD0Ev</span><br><span class="line">0000000000006152 T _ZN7jnifuse9OperationD1Ev</span><br><span class="line">0000000000006152 T _ZN7jnifuse9OperationD2Ev</span><br><span class="line">                 U _Znwm</span><br><span class="line">000000000000bca8 V _ZTIN7jnifuse13OpenOperationE</span><br><span class="line">000000000000bc90 V _ZTIN7jnifuse13ReadOperationE</span><br><span class="line">000000000000bc18 V _ZTIN7jnifuse14ChmodOperationE</span><br><span class="line">000000000000bc48 V _ZTIN7jnifuse14FlushOperationE</span><br><span class="line">000000000000bbe8 V _ZTIN7jnifuse14MkdirOperationE</span><br><span class="line">000000000000bbb8 V _ZTIN7jnifuse14RmdirOperationE</span><br><span class="line">000000000000bba0 V _ZTIN7jnifuse14WriteOperationE</span><br><span class="line">000000000000bc00 V _ZTIN7jnifuse15CreateOperationE</span><br><span class="line">000000000000bbd0 V _ZTIN7jnifuse15RenameOperationE</span><br><span class="line">000000000000bc60 V _ZTIN7jnifuse15UnlinkOperationE</span><br><span class="line">000000000000bcc0 V _ZTIN7jnifuse16GetattrOperationE</span><br><span class="line">000000000000bc78 V _ZTIN7jnifuse16ReaddirOperationE</span><br><span class="line">000000000000bc30 V _ZTIN7jnifuse16ReleaseOperationE</span><br><span class="line">000000000000bcd8 V _ZTIN7jnifuse9OperationE</span><br><span class="line">0000000000009430 V _ZTSN7jnifuse13OpenOperationE</span><br><span class="line">0000000000009410 V _ZTSN7jnifuse13ReadOperationE</span><br><span class="line">0000000000009370 V _ZTSN7jnifuse14ChmodOperationE</span><br><span class="line">00000000000093b0 V _ZTSN7jnifuse14FlushOperationE</span><br><span class="line">0000000000009330 V _ZTSN7jnifuse14MkdirOperationE</span><br><span class="line">00000000000092f0 V _ZTSN7jnifuse14RmdirOperationE</span><br><span class="line">00000000000092d0 V _ZTSN7jnifuse14WriteOperationE</span><br><span class="line">0000000000009350 V _ZTSN7jnifuse15CreateOperationE</span><br><span class="line">0000000000009310 V _ZTSN7jnifuse15RenameOperationE</span><br><span class="line">00000000000093d0 V _ZTSN7jnifuse15UnlinkOperationE</span><br><span class="line">0000000000009450 V _ZTSN7jnifuse16GetattrOperationE</span><br><span class="line">00000000000093f0 V _ZTSN7jnifuse16ReaddirOperationE</span><br><span class="line">0000000000009390 V _ZTSN7jnifuse16ReleaseOperationE</span><br><span class="line">0000000000009470 V _ZTSN7jnifuse9OperationE</span><br><span class="line">                 U _ZTVN10__cxxabiv117__class_type_infoE</span><br><span class="line">                 U _ZTVN10__cxxabiv120__si_class_type_infoE</span><br><span class="line">000000000000bb60 V _ZTVN7jnifuse13OpenOperationE</span><br><span class="line">000000000000bb40 V _ZTVN7jnifuse13ReadOperationE</span><br><span class="line">000000000000baa0 V _ZTVN7jnifuse14ChmodOperationE</span><br><span class="line">000000000000bae0 V _ZTVN7jnifuse14FlushOperationE</span><br><span class="line">000000000000ba60 V _ZTVN7jnifuse14MkdirOperationE</span><br><span class="line">000000000000ba20 V _ZTVN7jnifuse14RmdirOperationE</span><br><span class="line">000000000000ba00 V _ZTVN7jnifuse14WriteOperationE</span><br><span class="line">000000000000ba80 V _ZTVN7jnifuse15CreateOperationE</span><br><span class="line">000000000000ba40 V _ZTVN7jnifuse15RenameOperationE</span><br><span class="line">000000000000bb00 V _ZTVN7jnifuse15UnlinkOperationE</span><br><span class="line">000000000000bb80 V _ZTVN7jnifuse16GetattrOperationE</span><br><span class="line">000000000000bb20 V _ZTVN7jnifuse16ReaddirOperationE</span><br><span class="line">000000000000bac0 V _ZTVN7jnifuse16ReleaseOperationE</span><br><span class="line">000000000000b9e0 V _ZTVN7jnifuse9OperationE</span><br></pre></td></tr></table></figure>
+
+
+
+<h4><span id="将源码编译为libfuseso">将源码编译为libfuse.so</span></h4><hr>
+<p>查看makefile文件</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">#</span><br><span class="line"># The Alluxio Open Foundation licenses this work under the Apache License, version 2.0</span><br><span class="line"># (the &quot;License&quot;). You may not use this work except in compliance with the License, which is</span><br><span class="line"># available at www.apache.org&#x2F;licenses&#x2F;LICENSE-2.0</span><br><span class="line">#</span><br><span class="line"># This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,</span><br><span class="line"># either express or implied, as more fully set forth in the License.</span><br><span class="line">#</span><br><span class="line"># See the NOTICE file distributed with this work for information regarding copyright ownership.</span><br><span class="line"></span><br><span class="line">CXX :&#x3D; g++</span><br><span class="line">UNAME :&#x3D; $(shell uname)</span><br><span class="line">INCDIR &#x3D; -I &#x2F;usr&#x2F;include -I $(JAVA_HOME)&#x2F;include -I .&#x2F;</span><br><span class="line">FUSE_LIBS &#x3D; $(shell pkg-config fuse --libs)</span><br><span class="line">FUSE_CXXFLAGS &#x3D; $(shell pkg-config fuse --cflags)</span><br><span class="line"></span><br><span class="line"># Linux</span><br><span class="line">ifeq ($(UNAME), Linux)</span><br><span class="line">	INCDIR +&#x3D; -I $(JAVA_HOME)&#x2F;include&#x2F;linux</span><br><span class="line">	TARGET_LIB :&#x3D; libjnifuse.so</span><br><span class="line">endif</span><br><span class="line"># MacOS</span><br><span class="line">ifeq ($(UNAME), Darwin)</span><br><span class="line">	INCDIR +&#x3D; -I $(JAVA_HOME)&#x2F;include&#x2F;darwin</span><br><span class="line">	TARGET_LIB :&#x3D; libjnifuse.dylib</span><br><span class="line">endif</span><br><span class="line"></span><br><span class="line">CXXFLAGS &#x3D; -std&#x3D;c++11 -Wall -fPIC -D_FILE_OFFSET_BITS&#x3D;64 $&#123;INCDIR&#125; $&#123;FUSE_CXXFLAGS&#125;</span><br><span class="line">LDFLAGS &#x3D; -shared $&#123;FUSE_LIBS&#125;</span><br><span class="line">OUTPUT_DIR ?&#x3D; .</span><br><span class="line">SRC_DIR ?&#x3D; ..&#x2F;..&#x2F;src&#x2F;main&#x2F;native&#x2F;libjnifuse</span><br><span class="line">OBJS&#x3D; $(addprefix $(OUTPUT_DIR)&#x2F;, $(patsubst %.cc,%.o,$(notdir $(wildcard $(SRC_DIR)&#x2F;*.cc))))</span><br><span class="line"></span><br><span class="line">$&#123;TARGET_LIB&#125;: $&#123;OBJS&#125;</span><br><span class="line">	$&#123;CXX&#125; $&#123;CXXFLAGS&#125; -o $&#123;OUTPUT_DIR&#125;&#x2F;$&#123;TARGET_LIB&#125; $&#123;OBJS&#125; $&#123;LDFLAGS&#125;</span><br><span class="line"></span><br><span class="line">install: $&#123;TARGET_LIB&#125;</span><br><span class="line">	sudo mv $&#123;TARGET_LIB&#125; &#x2F;usr&#x2F;lib&#x2F;</span><br><span class="line"></span><br><span class="line">clean:</span><br><span class="line">	rm -rf $&#123;OBJS&#125; $&#123;OUTPUT_DIR&#125;&#x2F;$&#123;TARGET_LIB&#125;</span><br><span class="line"></span><br><span class="line">$&#123;OUTPUT_DIR&#125;&#x2F;%.o: $&#123;SRC_DIR&#125;&#x2F;%.cc</span><br><span class="line">	$&#123;CXX&#125; $&#123;CXXFLAGS&#125; -o $@ -c $&lt;</span><br></pre></td></tr></table></figure>
+
+
+
+<h4><span id="源码解析">源码解析</span></h4><hr>
+<p>/src/main/native/libjnifuse</p>
+<p>debug.h</p>
+<p>jnifuse_fs.cc</p>
+<p>jnifuse_fs.h</p>
+<p>jnifuse_helper.cc</p>
+<p>jnifuse_impls.cc</p>
+<p>jnifuse_impls.h</p>
+<p>Makefile</p>
+<p>operation.cc</p>
+<p>operation.h</p>
+<p>依赖库</p>
+<p>libfuse-dev，fuse-utils</p>
+<p>在用户态程序调用fuse_main() （lib/helper.c）时，先调用fuse_setup_common()该函数先解析用户态程序传递过来的参数，然后调用fuse_mount_common()（该函数是fuse_kern_mount()函数的封装，lib/mount.c）。<br>fuse_main()是一个宏定义（include/fuse.h）,如下：</p>
+<h5><span id="jnifuse_implsh-amp-jnifuse_implscc">jnifuse_impls.h &amp; jnifuse_impls.cc</span></h5><hr>
+<p>转发实现</p>
+<p>头文件</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;*</span><br><span class="line"> * The Alluxio Open Foundation licenses this work under the Apache License, version 2.0</span><br><span class="line"> * (the &quot;License&quot;). You may not use this work except in compliance with the License, which is</span><br><span class="line"> * available at www.apache.org&#x2F;licenses&#x2F;LICENSE-2.0</span><br><span class="line"> *</span><br><span class="line"> * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,</span><br><span class="line"> * either express or implied, as more fully set forth in the License.</span><br><span class="line"> *</span><br><span class="line"> * See the NOTICE file distributed with this work for information regarding copyright ownership.</span><br><span class="line"> *&#x2F;</span><br><span class="line"></span><br><span class="line">#ifndef FUSE_NATIVE_LIBJNIFUSE_IMPLS_H_</span><br><span class="line">#define FUSE_NATIVE_LIBJNIFUSE_IMPLS_H_</span><br><span class="line"></span><br><span class="line">#ifndef FUSE_USE_VERSION</span><br><span class="line">#define FUSE_USE_VERSION 26</span><br><span class="line">#endif</span><br><span class="line">#include &lt;fuse.h&gt;</span><br><span class="line"></span><br><span class="line">int chmod_wrapper(const char *path, mode_t mode);</span><br><span class="line">int create_wrapper(const char *path, mode_t mode, struct fuse_file_info *fi);</span><br><span class="line">int flush_wrapper(const char *path, struct fuse_file_info *fi);</span><br><span class="line">int getattr_wrapper(const char *path, struct stat *stbuf);</span><br><span class="line">int mkdir_wrapper(const char *path, mode_t mode);</span><br><span class="line">int open_wrapper(const char *path, struct fuse_file_info *fi);</span><br><span class="line">int read_wrapper(const char *path, char *buf, size_t size, off_t offset,</span><br><span class="line">                 struct fuse_file_info *fi);</span><br><span class="line">int readdir_wrapper(const char *path, void *buf, fuse_fill_dir_t filler,</span><br><span class="line">                    off_t offset, struct fuse_file_info *fi);</span><br><span class="line">int release_wrapper(const char *path, struct fuse_file_info *fi);</span><br><span class="line">int rename_wrapper(const char *oldPath, const char *newPath);</span><br><span class="line">int rmdir_wrapper(const char *path);</span><br><span class="line">int unlink_wrapper(const char *path);</span><br><span class="line">int write_wrapper(const char *path, const char *buf, size_t size, off_t off,</span><br><span class="line">                  struct fuse_file_info *fi);</span><br><span class="line"></span><br><span class="line">#endif  &#x2F;&#x2F; FUSE_NATIVE_LIBJNIFUSE_IMPLS_H_</span><br></pre></td></tr></table></figure>
+
+<p>实现</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;*</span><br><span class="line"> * The Alluxio Open Foundation licenses this work under the Apache License, version 2.0</span><br><span class="line"> * (the &quot;License&quot;). You may not use this work except in compliance with the License, which is</span><br><span class="line"> * available at www.apache.org&#x2F;licenses&#x2F;LICENSE-2.0</span><br><span class="line"> *</span><br><span class="line"> * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,</span><br><span class="line"> * either express or implied, as more fully set forth in the License.</span><br><span class="line"> *</span><br><span class="line"> * See the NOTICE file distributed with this work for information regarding copyright ownership.</span><br><span class="line"> *&#x2F;</span><br><span class="line"></span><br><span class="line">#include &quot;jnifuse_impls.h&quot;</span><br><span class="line"></span><br><span class="line">#include &quot;debug.h&quot;</span><br><span class="line">#include &quot;jnifuse_fs.h&quot;</span><br><span class="line"></span><br><span class="line">int chmod_wrapper(const char *path, mode_t mode) &#123;</span><br><span class="line">  return jnifuse::JniFuseFileSystem::getInstance()-&gt;chmodOper-&gt;call(path, mode);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int create_wrapper(const char *path, mode_t mode, struct fuse_file_info *fi) &#123;</span><br><span class="line">  return jnifuse::JniFuseFileSystem::getInstance()-&gt;createOper-&gt;call(path, mode,</span><br><span class="line">                                                                     fi);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int flush_wrapper(const char *path, struct fuse_file_info *fi) &#123;</span><br><span class="line">  return jnifuse::JniFuseFileSystem::getInstance()-&gt;flushOper-&gt;call(path, fi);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int getattr_wrapper(const char *path, struct stat *stbuf) &#123;</span><br><span class="line">  LOGD(&quot;getattr %s&quot;, path);</span><br><span class="line"></span><br><span class="line">  int ret &#x3D;</span><br><span class="line">      jnifuse::JniFuseFileSystem::getInstance()-&gt;getattrOper-&gt;call(path, stbuf);</span><br><span class="line"></span><br><span class="line">  LOGD(&quot;file %s: size&#x3D;%ld, mod&#x3D;%d&quot;, path, stbuf-&gt;st_size, stbuf-&gt;st_mode);</span><br><span class="line"></span><br><span class="line">  return ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int mkdir_wrapper(const char *path, mode_t mode) &#123;</span><br><span class="line">  return jnifuse::JniFuseFileSystem::getInstance()-&gt;mkdirOper-&gt;call(path, mode);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int open_wrapper(const char *path, struct fuse_file_info *fi) &#123;</span><br><span class="line">  LOGD(&quot;open %s&quot;, path);</span><br><span class="line"></span><br><span class="line">  int ret &#x3D; jnifuse::JniFuseFileSystem::getInstance()-&gt;openOper-&gt;call(path, fi);</span><br><span class="line"></span><br><span class="line">  return ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int read_wrapper(const char *path, char *buf, size_t size, off_t offset,</span><br><span class="line">                 struct fuse_file_info *fi) &#123;</span><br><span class="line">  LOGD(&quot;read: %s&quot;, path);</span><br><span class="line"></span><br><span class="line">  int ret &#x3D; jnifuse::JniFuseFileSystem::getInstance()-&gt;readOper-&gt;call(</span><br><span class="line">      path, buf, size, offset, fi);</span><br><span class="line"></span><br><span class="line">  LOGD(&quot;nread&#x3D;%d&quot;, ret);</span><br><span class="line"></span><br><span class="line">  return ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int readdir_wrapper(const char *path, void *buf, fuse_fill_dir_t filler,</span><br><span class="line">                    off_t offset, struct fuse_file_info *fi) &#123;</span><br><span class="line">  LOGD(&quot;readdir: %s&quot;, path);</span><br><span class="line"></span><br><span class="line">  int ret &#x3D; jnifuse::JniFuseFileSystem::getInstance()-&gt;readdirOper-&gt;call(</span><br><span class="line">      path, buf, filler, offset, fi);</span><br><span class="line"></span><br><span class="line">  return ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int release_wrapper(const char *path, struct fuse_file_info *fi) &#123;</span><br><span class="line">  return jnifuse::JniFuseFileSystem::getInstance()-&gt;releaseOper-&gt;call(path, fi);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int rename_wrapper(const char *oldPath, const char *newPath) &#123;</span><br><span class="line">  return jnifuse::JniFuseFileSystem::getInstance()-&gt;renameOper-&gt;call(oldPath, newPath);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int rmdir_wrapper(const char *path) &#123;</span><br><span class="line">  return jnifuse::JniFuseFileSystem::getInstance()-&gt;rmdirOper-&gt;call(path);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int unlink_wrapper(const char *path) &#123;</span><br><span class="line">  return jnifuse::JniFuseFileSystem::getInstance()-&gt;unlinkOper-&gt;call(path);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">int write_wrapper(const char *path, const char *buf, size_t size, off_t off,</span><br><span class="line">                  struct fuse_file_info *fi) &#123;</span><br><span class="line">  return jnifuse::JniFuseFileSystem::getInstance()-&gt;writeOper-&gt;call(</span><br><span class="line">      path, buf, size, off, fi);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<h5><span id="jnifuse_fsh-amp-jnifuse_fsh">jnifuse_fs.h &amp; jnifuse_fs.h</span></h5><hr>
+<p>调用</p>
+<p>头文件</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;*</span><br><span class="line"> * The Alluxio Open Foundation licenses this work under the Apache License, version 2.0</span><br><span class="line"> * (the &quot;License&quot;). You may not use this work except in compliance with the License, which is</span><br><span class="line"> * available at www.apache.org&#x2F;licenses&#x2F;LICENSE-2.0</span><br><span class="line"> *</span><br><span class="line"> * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,</span><br><span class="line"> * either express or implied, as more fully set forth in the License.</span><br><span class="line"> *</span><br><span class="line"> * See the NOTICE file distributed with this work for information regarding copyright ownership.</span><br><span class="line"> *&#x2F;</span><br><span class="line"></span><br><span class="line">#ifndef FUSE_NATIVE_LIBJNIFUSE_FS_H_</span><br><span class="line">#define FUSE_NATIVE_LIBJNIFUSE_FS_H_</span><br><span class="line"></span><br><span class="line">#include &lt;jni.h&gt;</span><br><span class="line"></span><br><span class="line">#include &quot;operation.h&quot;</span><br><span class="line"></span><br><span class="line">namespace jnifuse &#123;</span><br><span class="line"></span><br><span class="line">class ChmodOperation;</span><br><span class="line">class CreateOperation;</span><br><span class="line">class FlushOperation;</span><br><span class="line">class GetattrOperation;</span><br><span class="line">class MkdirOperation;</span><br><span class="line">class OpenOperation;</span><br><span class="line">class Operation;</span><br><span class="line">class ReaddirOperation;</span><br><span class="line">class ReadOperation;</span><br><span class="line">class ReleaseOperation;</span><br><span class="line">class RenameOperation;</span><br><span class="line">class RmdirOperation;</span><br><span class="line">class UnlinkOperation;</span><br><span class="line">class WriteOperation;</span><br><span class="line"></span><br><span class="line">class JniFuseFileSystem &#123;</span><br><span class="line"> private:</span><br><span class="line">  JniFuseFileSystem(JNIEnv *env, jobject obj);</span><br><span class="line">  ~JniFuseFileSystem();</span><br><span class="line"></span><br><span class="line"> public:</span><br><span class="line">  static JniFuseFileSystem *getInstance();</span><br><span class="line">  static void init(JNIEnv *env, jobject obj);</span><br><span class="line">  JNIEnv *getEnv();</span><br><span class="line">  JavaVM *getJVM();</span><br><span class="line">  jobject getFSObj();</span><br><span class="line"></span><br><span class="line"> private:</span><br><span class="line">  static JniFuseFileSystem *instance;</span><br><span class="line">  JavaVM *jvm;</span><br><span class="line">  jobject fs;</span><br><span class="line"></span><br><span class="line"> public:</span><br><span class="line">  ChmodOperation *chmodOper;</span><br><span class="line">  CreateOperation *createOper;</span><br><span class="line">  FlushOperation *flushOper;</span><br><span class="line">  GetattrOperation *getattrOper;</span><br><span class="line">  MkdirOperation *mkdirOper;</span><br><span class="line">  OpenOperation *openOper;</span><br><span class="line">  ReadOperation *readOper;</span><br><span class="line">  ReaddirOperation *readdirOper;</span><br><span class="line">  ReleaseOperation *releaseOper;</span><br><span class="line">  RenameOperation *renameOper;</span><br><span class="line">  RmdirOperation *rmdirOper;</span><br><span class="line">  UnlinkOperation *unlinkOper;</span><br><span class="line">  WriteOperation *writeOper;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&#125;  &#x2F;&#x2F; namespace jnifuse</span><br><span class="line"></span><br><span class="line">#endif  &#x2F;&#x2F; FUSE_NATIVE_LIBJNIFUSE_FS_H_</span><br></pre></td></tr></table></figure>
+
+<p>实现</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;*</span><br><span class="line"> * The Alluxio Open Foundation licenses this work under the Apache License, version 2.0</span><br><span class="line"> * (the &quot;License&quot;). You may not use this work except in compliance with the License, which is</span><br><span class="line"> * available at www.apache.org&#x2F;licenses&#x2F;LICENSE-2.0</span><br><span class="line"> *</span><br><span class="line"> * This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,</span><br><span class="line"> * either express or implied, as more fully set forth in the License.</span><br><span class="line"> *</span><br><span class="line"> * See the NOTICE file distributed with this work for information regarding copyright ownership.</span><br><span class="line"> *&#x2F;</span><br><span class="line"></span><br><span class="line">#include &quot;jnifuse_fs.h&quot;</span><br><span class="line"></span><br><span class="line">#include &lt;assert.h&gt;</span><br><span class="line">#include &lt;errno.h&gt;</span><br><span class="line">#include &lt;fcntl.h&gt;</span><br><span class="line">#include &lt;fuse.h&gt;</span><br><span class="line">#include &lt;jni.h&gt;</span><br><span class="line">#include &lt;pthread.h&gt;</span><br><span class="line">#include &lt;stdio.h&gt;</span><br><span class="line">#include &lt;stdlib.h&gt;</span><br><span class="line">#include &lt;string.h&gt;</span><br><span class="line"></span><br><span class="line">#include &quot;debug.h&quot;</span><br><span class="line"></span><br><span class="line">namespace jnifuse &#123;</span><br><span class="line"></span><br><span class="line">struct ThreadData &#123;</span><br><span class="line">  JavaVM *attachedJVM;</span><br><span class="line">  JNIEnv *attachedEnv;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">static pthread_key_t jffs_threadKey;</span><br><span class="line"></span><br><span class="line">static void thread_data_free(void *ptr) &#123;</span><br><span class="line">  ThreadData *td &#x3D; (ThreadData *)ptr;</span><br><span class="line">  if (td-&gt;attachedJVM !&#x3D; nullptr) &#123;</span><br><span class="line">    td-&gt;attachedJVM-&gt;DetachCurrentThread();</span><br><span class="line">  &#125;</span><br><span class="line">  delete td;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">JniFuseFileSystem *JniFuseFileSystem::instance &#x3D; nullptr;</span><br><span class="line"></span><br><span class="line">JniFuseFileSystem::JniFuseFileSystem(JNIEnv *env, jobject obj) &#123;</span><br><span class="line">  env-&gt;GetJavaVM(&amp;this-&gt;jvm);</span><br><span class="line">  this-&gt;fs &#x3D; env-&gt;NewGlobalRef(obj);</span><br><span class="line"></span><br><span class="line">  this-&gt;chmodOper &#x3D; new ChmodOperation(this);</span><br><span class="line">  this-&gt;createOper &#x3D; new CreateOperation(this);</span><br><span class="line">  this-&gt;flushOper &#x3D; new FlushOperation(this);</span><br><span class="line">  this-&gt;getattrOper &#x3D; new GetattrOperation(this);</span><br><span class="line">  this-&gt;mkdirOper &#x3D; new MkdirOperation(this);</span><br><span class="line">  this-&gt;openOper &#x3D; new OpenOperation(this);</span><br><span class="line">  this-&gt;readOper &#x3D; new ReadOperation(this);</span><br><span class="line">  this-&gt;readdirOper &#x3D; new ReaddirOperation(this);</span><br><span class="line">  this-&gt;releaseOper &#x3D; new ReleaseOperation(this);</span><br><span class="line">  this-&gt;renameOper &#x3D; new RenameOperation(this);</span><br><span class="line">  this-&gt;rmdirOper &#x3D; new RmdirOperation(this);</span><br><span class="line">  this-&gt;unlinkOper &#x3D; new UnlinkOperation(this);</span><br><span class="line">  this-&gt;writeOper &#x3D; new WriteOperation(this);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">JniFuseFileSystem::~JniFuseFileSystem() &#123;</span><br><span class="line">  delete this-&gt;chmodOper;</span><br><span class="line">  delete this-&gt;createOper;</span><br><span class="line">  delete this-&gt;flushOper;</span><br><span class="line">  delete this-&gt;getattrOper;</span><br><span class="line">  delete this-&gt;mkdirOper;</span><br><span class="line">  delete this-&gt;openOper;</span><br><span class="line">  delete this-&gt;readOper;</span><br><span class="line">  delete this-&gt;readdirOper;</span><br><span class="line">  delete this-&gt;releaseOper;</span><br><span class="line">  delete this-&gt;renameOper;</span><br><span class="line">  delete this-&gt;rmdirOper;</span><br><span class="line">  delete this-&gt;unlinkOper;</span><br><span class="line">  delete this-&gt;writeOper;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">void JniFuseFileSystem::init(JNIEnv *env, jobject obj) &#123;</span><br><span class="line">  if (instance !&#x3D; nullptr) &#123;</span><br><span class="line">    LOGE(&quot;you cant initialize more than once&quot;);</span><br><span class="line">  &#125;</span><br><span class="line">  pthread_key_create(&amp;jffs_threadKey, thread_data_free);</span><br><span class="line">  instance &#x3D; new JniFuseFileSystem(env, obj);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">JniFuseFileSystem *JniFuseFileSystem::getInstance() &#123;</span><br><span class="line">  if (instance &#x3D;&#x3D; nullptr) &#123;</span><br><span class="line">    LOGE(&quot;you must initialize before using JniFuseFileSystem&quot;);</span><br><span class="line">    exit(-1);</span><br><span class="line">  &#125;</span><br><span class="line">  return instance;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">JNIEnv *JniFuseFileSystem::getEnv() &#123;</span><br><span class="line">  ThreadData *td &#x3D; (ThreadData *)pthread_getspecific(jffs_threadKey);</span><br><span class="line">  if (td &#x3D;&#x3D; nullptr) &#123;</span><br><span class="line">    td &#x3D; new ThreadData();</span><br><span class="line">    td-&gt;attachedJVM &#x3D; this-&gt;jvm;</span><br><span class="line">    this-&gt;jvm-&gt;AttachCurrentThreadAsDaemon((void **)&amp;td-&gt;attachedEnv, nullptr);</span><br><span class="line">    pthread_setspecific(jffs_threadKey, td);</span><br><span class="line">    return td-&gt;attachedEnv;</span><br><span class="line">  &#125;</span><br><span class="line">  return td-&gt;attachedEnv;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">JavaVM *JniFuseFileSystem::getJVM() &#123; return this-&gt;jvm; &#125;</span><br><span class="line"></span><br><span class="line">jobject JniFuseFileSystem::getFSObj() &#123; return this-&gt;fs; &#125;</span><br><span class="line"></span><br><span class="line">&#125;  &#x2F;&#x2F; namespace jnifuse</span><br></pre></td></tr></table></figure>
+
+
+
+<h2><span id="suse">SUSE</span></h2><p>FUSE (Filesystem in Userspace) is an interface for userspace programs to export a filesystem to the Linux kernel. The FUSE project consists of two components: the <em>fuse</em> kernel module (maintained in the regular kernel repositories) and the <em>libfuse</em> userspace library. libfuse provides the reference implementation for communicating with the FUSE kernel module.</p>
+<p>A FUSE file system is typically implemented as a standalone application that links with libfuse. libfuse provides functions to mount the file system, unmount it, read requests from the kernel, and send responses back.</p>
+<p>libfuse offers two APIs: a “high-level”, synchronous API, and a “low-level” asynchronous API. In both cases, incoming requests from the kernel are passed to the main program using callbacks. When using the high-level API, the callbacks may work with file names and paths instead of inodes, and processing of a request finishes when the callback function returns. When using the low-level API, the callbacks must work with inodes and responses must be sent explicitly using a separate set of API functions.</p>
+<p>The high-level API that is primarily specified in fuse.h. The low-level API that is primarily documented in fuse_lowlevel.h.</p>
+<p>libfuse源码查看</p>
+<p><a href="http://libfuse.github.io/doxygen/files.html" target="_blank" rel="noopener">http://libfuse.github.io/doxygen/files.html</a></p>
+<p>目录结构</p>
+<p>-example</p>
+<p>-include</p>
+<p>-lib</p>
+<p>-test</p>
+<p>-util</p>
+<p>lib/mount.c</p>
+<p>lib/helper.c</p>
+<p>lib/fuse.c</p>
+<p>util/fusermount.c</p>
+<h3><span id="example-helloc">Example-hello.c</span></h3><hr>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gcc -Wall hello.c &#96;pkg-config fuse3 --cflags --libs&#96; -o hello</span><br></pre></td></tr></table></figure>
+
+
+
+<p>hello.c</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;*</span><br><span class="line">  FUSE: Filesystem in Userspace</span><br><span class="line">  Copyright (C) 2001-2007  Miklos Szeredi &lt;miklos@szeredi.hu&gt;</span><br><span class="line">  This program can be distributed under the terms of the GNU GPLv2.</span><br><span class="line">  See the file COPYING.</span><br><span class="line">*&#x2F;</span><br><span class="line">#define FUSE_USE_VERSION 31</span><br><span class="line">#include &lt;fuse.h&gt;</span><br><span class="line">#include &lt;stdio.h&gt;</span><br><span class="line">#include &lt;string.h&gt;</span><br><span class="line">#include &lt;errno.h&gt;</span><br><span class="line">#include &lt;fcntl.h&gt;</span><br><span class="line">#include &lt;stddef.h&gt;</span><br><span class="line">#include &lt;assert.h&gt;</span><br><span class="line">&#x2F;*</span><br><span class="line"> * Command line options</span><br><span class="line"> *</span><br><span class="line"> * We can&#39;t set default values for the char* fields here because</span><br><span class="line"> * fuse_opt_parse would attempt to free() them when the user specifies</span><br><span class="line"> * different values on the command line.</span><br><span class="line"> *&#x2F;</span><br><span class="line">static struct options &#123;</span><br><span class="line">        const char *filename;</span><br><span class="line">        const char *contents;</span><br><span class="line">        int show_help;</span><br><span class="line">&#125; options;</span><br><span class="line">#define OPTION(t, p)                           \</span><br><span class="line">    &#123; t, offsetof(struct options, p), 1 &#125;</span><br><span class="line">static const struct fuse_opt option_spec[] &#x3D; &#123;</span><br><span class="line">        OPTION(&quot;--name&#x3D;%s&quot;, filename),</span><br><span class="line">        OPTION(&quot;--contents&#x3D;%s&quot;, contents),</span><br><span class="line">        OPTION(&quot;-h&quot;, show_help),</span><br><span class="line">        OPTION(&quot;--help&quot;, show_help),</span><br><span class="line">        FUSE_OPT_END</span><br><span class="line">&#125;;</span><br><span class="line">static void *hello_init(struct fuse_conn_info *conn,</span><br><span class="line">                        struct fuse_config *cfg)</span><br><span class="line">&#123;</span><br><span class="line">        (void) conn;</span><br><span class="line">        cfg-&gt;kernel_cache &#x3D; 1;</span><br><span class="line">        return NULL;</span><br><span class="line">&#125;</span><br><span class="line">static int hello_getattr(const char *path, struct stat *stbuf,</span><br><span class="line">                         struct fuse_file_info *fi)</span><br><span class="line">&#123;</span><br><span class="line">        (void) fi;</span><br><span class="line">        int res &#x3D; 0;</span><br><span class="line">        memset(stbuf, 0, sizeof(struct stat));</span><br><span class="line">        if (strcmp(path, &quot;&#x2F;&quot;) &#x3D;&#x3D; 0) &#123;</span><br><span class="line">                stbuf-&gt;st_mode &#x3D; S_IFDIR | 0755;</span><br><span class="line">                stbuf-&gt;st_nlink &#x3D; 2;</span><br><span class="line">        &#125; else if (strcmp(path+1, options.filename) &#x3D;&#x3D; 0) &#123;</span><br><span class="line">                stbuf-&gt;st_mode &#x3D; S_IFREG | 0444;</span><br><span class="line">                stbuf-&gt;st_nlink &#x3D; 1;</span><br><span class="line">                stbuf-&gt;st_size &#x3D; strlen(options.contents);</span><br><span class="line">        &#125; else</span><br><span class="line">                res &#x3D; -ENOENT;</span><br><span class="line">        return res;</span><br><span class="line">&#125;</span><br><span class="line">static int hello_readdir(const char *path, void *buf, fuse_fill_dir_t filler,</span><br><span class="line">                         off_t offset, struct fuse_file_info *fi,</span><br><span class="line">                         enum fuse_readdir_flags flags)</span><br><span class="line">&#123;</span><br><span class="line">        (void) offset;</span><br><span class="line">        (void) fi;</span><br><span class="line">        (void) flags;</span><br><span class="line">        if (strcmp(path, &quot;&#x2F;&quot;) !&#x3D; 0)</span><br><span class="line">                return -ENOENT;</span><br><span class="line">        filler(buf, &quot;.&quot;, NULL, 0, 0);</span><br><span class="line">        filler(buf, &quot;..&quot;, NULL, 0, 0);</span><br><span class="line">        filler(buf, options.filename, NULL, 0, 0);</span><br><span class="line">        return 0;</span><br><span class="line">&#125;</span><br><span class="line">static int hello_open(const char *path, struct fuse_file_info *fi)</span><br><span class="line">&#123;</span><br><span class="line">        if (strcmp(path+1, options.filename) !&#x3D; 0)</span><br><span class="line">                return -ENOENT;</span><br><span class="line">        if ((fi-&gt;flags &amp; O_ACCMODE) !&#x3D; O_RDONLY)</span><br><span class="line">                return -EACCES;</span><br><span class="line">        return 0;</span><br><span class="line">&#125;</span><br><span class="line">static int hello_read(const char *path, char *buf, size_t size, off_t offset,</span><br><span class="line">                      struct fuse_file_info *fi)</span><br><span class="line">&#123;</span><br><span class="line">        size_t len;</span><br><span class="line">        (void) fi;</span><br><span class="line">        if(strcmp(path+1, options.filename) !&#x3D; 0)</span><br><span class="line">                return -ENOENT;</span><br><span class="line">        len &#x3D; strlen(options.contents);</span><br><span class="line">        if (offset &lt; len) &#123;</span><br><span class="line">                if (offset + size &gt; len)</span><br><span class="line">                        size &#x3D; len - offset;</span><br><span class="line">                memcpy(buf, options.contents + offset, size);</span><br><span class="line">        &#125; else</span><br><span class="line">                size &#x3D; 0;</span><br><span class="line">        return size;</span><br><span class="line">&#125;</span><br><span class="line">static const struct fuse_operations hello_oper &#x3D; &#123;</span><br><span class="line">        .init           &#x3D; hello_init,</span><br><span class="line">        .getattr        &#x3D; hello_getattr,</span><br><span class="line">        .readdir        &#x3D; hello_readdir,</span><br><span class="line">        .open           &#x3D; hello_open,</span><br><span class="line">        .read           &#x3D; hello_read,</span><br><span class="line">&#125;;</span><br><span class="line">static void show_help(const char *progname)</span><br><span class="line">&#123;</span><br><span class="line">        printf(&quot;usage: %s [options] &lt;mountpoint&gt;\n\n&quot;, progname);</span><br><span class="line">        printf(&quot;File-system specific options:\n&quot;</span><br><span class="line">               &quot;    --name&#x3D;&lt;s&gt;          Name of the \&quot;hello\&quot; file\n&quot;</span><br><span class="line">               &quot;                        (default: \&quot;hello\&quot;)\n&quot;</span><br><span class="line">               &quot;    --contents&#x3D;&lt;s&gt;      Contents \&quot;hello\&quot; file\n&quot;</span><br><span class="line">               &quot;                        (default \&quot;Hello, World!\\n\&quot;)\n&quot;</span><br><span class="line">               &quot;\n&quot;);</span><br><span class="line">&#125;</span><br><span class="line">int main(int argc, char *argv[])</span><br><span class="line">&#123;</span><br><span class="line">        int ret;</span><br><span class="line">        struct fuse_args args &#x3D; FUSE_ARGS_INIT(argc, argv);</span><br><span class="line">        &#x2F;* Set defaults -- we have to use strdup so that</span><br><span class="line">           fuse_opt_parse can free the defaults if other</span><br><span class="line">           values are specified *&#x2F;</span><br><span class="line">        options.filename &#x3D; strdup(&quot;hello&quot;);</span><br><span class="line">        options.contents &#x3D; strdup(&quot;Hello World!\n&quot;);</span><br><span class="line">        &#x2F;* Parse options *&#x2F;</span><br><span class="line">        if (fuse_opt_parse(&amp;args, &amp;options, option_spec, NULL) &#x3D;&#x3D; -1)</span><br><span class="line">                return 1;</span><br><span class="line">        &#x2F;* When --help is specified, first print our own file-system</span><br><span class="line">           specific help text, then signal fuse_main to show</span><br><span class="line">           additional help (by adding &#96;--help&#96; to the options again)</span><br><span class="line">           without usage: line (by setting argv[0] to the empty</span><br><span class="line">           string) *&#x2F;</span><br><span class="line">        if (options.show_help) &#123;</span><br><span class="line">                show_help(argv[0]);</span><br><span class="line">                assert(fuse_opt_add_arg(&amp;args, &quot;--help&quot;) &#x3D;&#x3D; 0);</span><br><span class="line">                args.argv[0][0] &#x3D; &#39;\0&#39;;</span><br><span class="line">        &#125;</span><br><span class="line">        ret &#x3D; fuse_main(args.argc, args.argv, &amp;hello_oper, NULL);</span><br><span class="line">        fuse_opt_free_args(&amp;args);</span><br><span class="line">        return ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Alluxio/" rel="tag"># Alluxio</a>
+              <a href="/tags/JNI/" rel="tag"># JNI</a>
+              <a href="/tags/FUSE/" rel="tag"># FUSE</a>
+              <a href="/tags/JNI-FUSE/" rel="tag"># JNI-FUSE</a>
+              <a href="/tags/Java-Fuse/" rel="tag"># Java-Fuse</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/07/06/%E4%BB%8EJNI%E5%88%B0JNI-FUSE/" rel="prev" title="从JNI到JNI-FUSE">
+      <i class="fa fa-chevron-left"></i> 从JNI到JNI-FUSE
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/07/08/Activiti%E5%AE%9E%E6%88%98/" rel="next" title="Activiti入门">
+      Activiti入门 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#"><span class="nav-number">1.</span> <span class="nav-text">Alluxio JNI-FUSE</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#"><span class="nav-number">1.1.</span> <span class="nav-text">挂载源码分析</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#"><span class="nav-number">1.1.0.1.</span> <span class="nav-text">fuse_main</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#"><span class="nav-number">1.2.</span> <span class="nav-text">libjnifuse.so</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.2.1.</span> <span class="nav-text">将源码编译为libfuse.so</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.2.2.</span> <span class="nav-text">源码解析</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#"><span class="nav-number">1.2.2.1.</span> <span class="nav-text">jnifuse_impls.h &amp; jnifuse_impls.cc</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#"><span class="nav-number">1.2.2.2.</span> <span class="nav-text">jnifuse_fs.h &amp; jnifuse_fs.h</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#"><span class="nav-number">2.</span> <span class="nav-text">SUSE</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#"><span class="nav-number">2.1.</span> <span class="nav-text">Example-hello.c</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">李宁</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">39</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">71</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">李宁</span>
+</div>
+  <div class="powered-by">万物之始，大道至简
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">知易行难，悟在天成
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

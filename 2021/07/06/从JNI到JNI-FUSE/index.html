@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"localhost","root":"/","scheme":"Muse","version":"7.7.2","exturl":false,"sidebar":{"position":"left","display":"hide","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="JNI 简介 链接方式 让 Java 虚拟机自动查找符合默认命名规范的 C 函数，并且链接起来 在 C 代码中主动链接   本地实现 Java JNI调用示例 C调用Java   JNI-FUSE 从mount挂在说起 文件系统 FUSE 请求 响应 &#x2F;dev&#x2F;fuse 使用   Java开发Fuse文件系统   Alluxio JNI Fuse     JNI 简介借助 Java 虚拟机的">
+<meta property="og:type" content="article">
+<meta property="og:title" content="从JNI到JNI-FUSE">
+<meta property="og:url" content="http://localhost:4000/2021/07/06/%E4%BB%8EJNI%E5%88%B0JNI-FUSE/index.html">
+<meta property="og:site_name" content="李宁的博客">
+<meta property="og:description" content="JNI 简介 链接方式 让 Java 虚拟机自动查找符合默认命名规范的 C 函数，并且链接起来 在 C 代码中主动链接   本地实现 Java JNI调用示例 C调用Java   JNI-FUSE 从mount挂在说起 文件系统 FUSE 请求 响应 &#x2F;dev&#x2F;fuse 使用   Java开发Fuse文件系统   Alluxio JNI Fuse     JNI 简介借助 Java 虚拟机的">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://localhost:4000/images/alluxio-jni-fuse.png">
+<meta property="article:published_time" content="2021-07-05T16:00:00.000Z">
+<meta property="article:modified_time" content="2021-07-06T13:34:39.371Z">
+<meta property="article:author" content="李宁">
+<meta property="article:tag" content="JNI">
+<meta property="article:tag" content="FUSE">
+<meta property="article:tag" content="JNI-FUSE">
+<meta property="article:tag" content="Java-Fuse">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://localhost:4000/images/alluxio-jni-fuse.png">
+
+<link rel="canonical" href="http://localhost:4000/2021/07/06/%E4%BB%8EJNI%E5%88%B0JNI-FUSE/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true
+  };
+</script>
+
+  <title>从JNI到JNI-FUSE | 李宁的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">李宁的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://localhost:4000/2021/07/06/%E4%BB%8EJNI%E5%88%B0JNI-FUSE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="李宁">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="李宁的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          从JNI到JNI-FUSE
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2021-07-06 00:00:00 / 修改时间：21:34:39" itemprop="dateCreated datePublished" datetime="2021-07-06T00:00:00+08:00">2021-07-06</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/JNI/" itemprop="url" rel="index"><span itemprop="name">JNI</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <!-- toc -->
+
+<ul>
+<li><a href="#jni-简介">JNI 简介</a><ul>
+<li><a href="#链接方式">链接方式</a><ul>
+<li><a href="#让-java-虚拟机自动查找符合默认命名规范的-c-函数并且链接起来">让 Java 虚拟机自动查找符合默认命名规范的 C 函数，并且链接起来</a></li>
+<li><a href="#在-c-代码中主动链接">在 C 代码中主动链接</a></li>
+</ul>
+</li>
+<li><a href="#本地实现">本地实现</a></li>
+<li><a href="#java-jni调用示例">Java JNI调用示例</a></li>
+<li><a href="#c调用java">C调用Java</a></li>
+</ul>
+</li>
+<li><a href="#jni-fuse">JNI-FUSE</a><ul>
+<li><a href="#从mount挂在说起">从mount挂在说起</a></li>
+<li><a href="#文件系统">文件系统</a></li>
+<li><a href="#fuse">FUSE</a><ul>
+<li><a href="#请求">请求</a></li>
+<li><a href="#响应">响应</a></li>
+<li><a href="#devfuse">/dev/fuse</a></li>
+<li><a href="#使用">使用</a></li>
+</ul>
+</li>
+<li><a href="#java开发fuse文件系统">Java开发Fuse文件系统</a></li>
+</ul>
+</li>
+<li><a href="#alluxio-jni-fuse">Alluxio JNI Fuse</a></li>
+</ul>
+<!-- tocstop -->
+
+<hr>
+<h2><span id="jni-简介">JNI 简介</span></h2><p>借助 Java 虚拟机的 Java Native Interface（JNI）机制，我们可以跨语言的调用。</p>
+<p>在Java中，使用native关键字标识本地方法，且该方法没有方法体。例如Java 的Object类</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> java.lang;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Object</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">native</span> <span class="keyword">void</span> <span class="title">registerNatives</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="keyword">static</span> &#123;</span><br><span class="line">        registerNatives();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">native</span> Class&lt;?&gt; getClass();</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">native</span> <span class="keyword">int</span> <span class="title">hashCode</span><span class="params">()</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">equals</span><span class="params">(Object obj)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">return</span> (<span class="keyword">this</span> == obj);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">native</span> Object <span class="title">clone</span><span class="params">()</span> <span class="keyword">throws</span> CloneNotSupportedException</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">toString</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="keyword">return</span> getClass().getName() + <span class="string">"@"</span> + Integer.toHexString(hashCode());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">native</span> <span class="keyword">void</span> <span class="title">notify</span><span class="params">()</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">native</span> <span class="keyword">void</span> <span class="title">notifyAll</span><span class="params">()</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">native</span> <span class="keyword">void</span> <span class="title">wait</span><span class="params">(<span class="keyword">long</span> timeout)</span> <span class="keyword">throws</span> InterruptedException</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">wait</span><span class="params">(<span class="keyword">long</span> timeout, <span class="keyword">int</span> nanos)</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (timeout &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"timeout value is negative"</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (nanos &lt; <span class="number">0</span> || nanos &gt; <span class="number">999999</span>) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(</span><br><span class="line">				<span class="string">"nanosecond timeout value out of range"</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (nanos &gt;= <span class="number">500000</span> || (nanos != <span class="number">0</span> &amp;&amp; timeout == <span class="number">0</span>)) &#123;</span><br><span class="line">	    timeout++;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	wait(timeout);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">wait</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">	wait(<span class="number">0</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">finalize</span><span class="params">()</span> <span class="keyword">throws</span> Throwable </span>&#123; &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在调用 native 方法前，Java 虚拟机需要将该 native 方法链接至对应的 C 函数上。</p>
+<h3><span id="链接方式">链接方式</span></h3><hr>
+<h4><span id="让-java-虚拟机自动查找符合默认命名规范的-c-函数并且链接起来">让 Java 虚拟机自动查找符合默认命名规范的 C 函数，并且链接起来</span></h4><hr>
+<p>第一种是让 Java 虚拟机自动查找符合默认命名规范的 C 函数，并且链接起来。采用javac -h命令，便可以根据 Java 程序中的 native 方法声明，自动生成包含符合命名规范的 C 函数的头文件。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> io.lemon.jni;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">JniTest</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">native</span> <span class="keyword">void</span> <span class="title">test</span><span class="params">()</span></span>;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">native</span> <span class="keyword">void</span> <span class="title">test</span><span class="params">(String s)</span></span>;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当前目录</p>
+<p>javac -h . io/lemon/jni/JniTest.java</p>
+<p>io_lemon_jni_JniTest.h</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* DO NOT EDIT THIS FILE - it is machine generated */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;jni.h&gt;</span></span></span><br><span class="line"><span class="comment">/* Header for class io_lemon_jni_JniTest */</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> _Included_io_lemon_jni_JniTest</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> _Included_io_lemon_jni_JniTest</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> __cplusplus</span></span><br><span class="line"><span class="keyword">extern</span> <span class="string">"C"</span> &#123;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Class:     io_lemon_jni_JniTest</span></span><br><span class="line"><span class="comment"> * Method:    test</span></span><br><span class="line"><span class="comment"> * Signature: ()V</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">JNIEXPORT <span class="keyword">void</span> JNICALL Java_io_lemon_jni_JniTest_test</span><br><span class="line">  (JNIEnv *, jclass);</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> __cplusplus</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+
+
+
+<p>命名规范：native 方法对应的 C 函数都需要以Java_为前缀，之后跟着完整的包名和方法名由于 C 函数名不支持/字符，因此我们需要将/转换为_下划线，而原本方法名中的_符号，则需要转换为_下划线1。当某个类出现重载的 native 方法时，Java 虚拟机还会将参数类型纳入自动链接对象的考虑范围之中。具体的做法便是在前面 C 函数名的基础上，追加__以及方法描述符作为后缀。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">package io.lemon.jni;</span><br><span class="line"></span><br><span class="line">public class JniTest &#123;</span><br><span class="line"></span><br><span class="line">    public static native void test();</span><br><span class="line"></span><br><span class="line">    public static native void test(String s);</span><br><span class="line"></span><br><span class="line">    public static native void test(String s, int a);</span><br><span class="line"></span><br><span class="line">    public static native String foo();</span><br><span class="line"></span><br><span class="line">    public native String hello(String s, Long a);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>io_lemon_jni_JniTest.h</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* DO NOT EDIT THIS FILE - it is machine generated */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;jni.h&gt;</span></span></span><br><span class="line"><span class="comment">/* Header for class io_lemon_jni_JniTest */</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifndef</span> _Included_io_lemon_jni_JniTest</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> _Included_io_lemon_jni_JniTest</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> __cplusplus</span></span><br><span class="line"><span class="keyword">extern</span> <span class="string">"C"</span> &#123;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Class:     io_lemon_jni_JniTest</span></span><br><span class="line"><span class="comment"> * Method:    test</span></span><br><span class="line"><span class="comment"> * Signature: ()V</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">JNIEXPORT <span class="keyword">void</span> JNICALL Java_io_lemon_jni_JniTest_test__</span><br><span class="line">  (JNIEnv *, jclass);</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Class:     io_lemon_jni_JniTest</span></span><br><span class="line"><span class="comment"> * Method:    test</span></span><br><span class="line"><span class="comment"> * Signature: (Ljava/lang/String;)V</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">JNIEXPORT <span class="keyword">void</span> JNICALL Java_io_lemon_jni_JniTest_test__Ljava_lang_String_2</span><br><span class="line">  (JNIEnv *, jclass, jstring);</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Class:     io_lemon_jni_JniTest</span></span><br><span class="line"><span class="comment"> * Method:    test</span></span><br><span class="line"><span class="comment"> * Signature: (Ljava/lang/String;I)V</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">JNIEXPORT <span class="keyword">void</span> JNICALL Java_io_lemon_jni_JniTest_test__Ljava_lang_String_2I</span><br><span class="line">  (JNIEnv *, jclass, jstring, jint);</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Class:     io_lemon_jni_JniTest</span></span><br><span class="line"><span class="comment"> * Method:    foo</span></span><br><span class="line"><span class="comment"> * Signature: ()Ljava/lang/String;</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">JNIEXPORT jstring JNICALL Java_io_lemon_jni_JniTest_foo</span><br><span class="line">  (JNIEnv *, jclass);</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Class:     io_lemon_jni_JniTest</span></span><br><span class="line"><span class="comment"> * Method:    hello</span></span><br><span class="line"><span class="comment"> * Signature: (Ljava/lang/String;Ljava/lang/Long;)Ljava/lang/String;</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">JNIEXPORT jstring JNICALL Java_io_lemon_jni_JniTest_hello</span><br><span class="line">  (JNIEnv *, jobject, jstring, jobject);</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> __cplusplus</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+
+
+
+<h4><span id="在-c-代码中主动链接">在 C 代码中主动链接</span></h4><hr>
+<p>这种链接方式对 C 函数名没有要求。通常我们会使用一个名为registerNatives的 native 方法，并按照第一种链接方式定义所能自动链接的 C 函数。在该 C 函数中，我们将手动链接该类的其他 native 方法。当使用第二种方式进行链接时，我们需要在其他 native 方法被调用之前完成链接工作。因此，我们往往会在类的初始化方法里调用该registerNatives方法。</p>
+<h3><span id="本地实现">本地实现</span></h3><hr>
+<p>JniTest.java</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">package io.lemon.jni;</span><br><span class="line"></span><br><span class="line">public class JniTest &#123;</span><br><span class="line"></span><br><span class="line">    public static native void test();</span><br><span class="line">    </span><br><span class="line">    public static void main(String []args) &#123;</span><br><span class="line">        try &#123;      </span><br><span class="line">            System.loadLibrary(&quot;jnitest&quot;);    </span><br><span class="line">        &#125; catch (UnsatisfiedLinkError e) &#123;      </span><br><span class="line">            e.printStackTrace();      </span><br><span class="line">            System.exit(1);    </span><br><span class="line">        &#125;</span><br><span class="line">        test();</span><br><span class="line">        System.out.println(&quot;Hello World&quot;);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>jnitest.c</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;* DO NOT EDIT THIS FILE - it is machine generated *&#x2F;</span><br><span class="line">#include &lt;jni.h&gt;</span><br><span class="line">&#x2F;* Header for class JniTest *&#x2F;</span><br><span class="line"></span><br><span class="line">#ifndef _Included_JniTest</span><br><span class="line">#define _Included_JniTest</span><br><span class="line">#ifdef __cplusplus</span><br><span class="line">extern &quot;C&quot; &#123;</span><br><span class="line">#endif</span><br><span class="line">&#x2F;*</span><br><span class="line"> * Class:     JniTest</span><br><span class="line"> * Method:    test</span><br><span class="line"> * Signature: ()V</span><br><span class="line"> *&#x2F;</span><br><span class="line">JNIEXPORT void JNICALL Java_JniTest_test</span><br><span class="line">  (JNIEnv *, jclass);</span><br><span class="line"></span><br><span class="line">#ifdef __cplusplus</span><br><span class="line">&#125;</span><br><span class="line">#endif</span><br><span class="line">#endif</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;stdio.h&gt;</span><br><span class="line">#include &quot;JniTest.h&quot;</span><br><span class="line"></span><br><span class="line">JNIEXPORT void JNICALL Java_JniTest_test</span><br><span class="line">  (JNIEnv *env, jobject thisObject) &#123;</span><br><span class="line">  printf(&quot;Hello, World\n&quot;);</span><br><span class="line">  return;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">"io_lemon_jni_JniTest.h"</span></span></span><br><span class="line"></span><br><span class="line">JNIEXPORT <span class="keyword">void</span> JNICALL Java_io_lemon_jni_JniTest_test__</span><br><span class="line">  (JNIEnv *, jclass) &#123;</span><br><span class="line">  <span class="built_in">printf</span>(<span class="string">"Hello, World\n"</span>);</span><br><span class="line">  <span class="keyword">return</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>通过 gcc 命令将其编译成为动态链接库。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gcc -I $JAVA_HOME&#x2F;include -I $JAVA_HOME&#x2F;include&#x2F;linux -fPIC  -c jnitest.c </span><br><span class="line">gcc -shared jnitest.o -o jnitest.so</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">java -Djava.library.path&#x3D;&#x2F;home&#x2F;jni JniTest</span><br></pre></td></tr></table></figure>
+
+
+
+<h3><span id="java-jni调用示例">Java JNI调用示例</span></h3><hr>
+<p>cd /home/jni</p>
+<p>JniTest.java</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">public class JniTest &#123;</span><br><span class="line"></span><br><span class="line">    public static native void test();</span><br><span class="line">    </span><br><span class="line">    public static void main(String[] args) &#123;</span><br><span class="line">        try &#123;      </span><br><span class="line">            System.load(&quot;&#x2F;home&#x2F;jni&#x2F;jnitest.so&quot;);    </span><br><span class="line">        &#125; catch (UnsatisfiedLinkError e) &#123;      </span><br><span class="line">            e.printStackTrace();      </span><br><span class="line">            System.exit(1);    </span><br><span class="line">        &#125;</span><br><span class="line">        test();</span><br><span class="line">        System.out.println(&quot;Hello World&quot;);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">javac -h .  JniTest.java</span><br></pre></td></tr></table></figure>
+
+
+
+<p>JniTest.h</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">&#x2F;* DO NOT EDIT THIS FILE - it is machine generated *&#x2F;</span><br><span class="line">#include &lt;jni.h&gt;</span><br><span class="line">&#x2F;* Header for class JniTest *&#x2F;</span><br><span class="line"></span><br><span class="line">#ifndef _Included_JniTest</span><br><span class="line">#define _Included_JniTest</span><br><span class="line">#ifdef __cplusplus</span><br><span class="line">extern &quot;C&quot; &#123;</span><br><span class="line">#endif</span><br><span class="line">&#x2F;*</span><br><span class="line"> * Class:     JniTest</span><br><span class="line"> * Method:    test</span><br><span class="line"> * Signature: ()V</span><br><span class="line"> *&#x2F;</span><br><span class="line">JNIEXPORT void JNICALL Java_JniTest_test</span><br><span class="line">  (JNIEnv *, jclass);</span><br><span class="line"></span><br><span class="line">#ifdef __cplusplus</span><br><span class="line">&#125;</span><br><span class="line">#endif</span><br><span class="line">#endif</span><br></pre></td></tr></table></figure>
+
+
+
+<p>jnitest.c</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;stdio.h&gt;</span><br><span class="line">#include &quot;JniTest.h&quot;</span><br><span class="line"></span><br><span class="line">JNIEXPORT void JNICALL Java_JniTest_test</span><br><span class="line">  (JNIEnv *env, jobject thisObject) &#123;</span><br><span class="line">  printf(&quot;Hello, World JNI\n&quot;);</span><br><span class="line">  return;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gcc -I $JAVA_HOME&#x2F;include -I $JAVA_HOME&#x2F;include&#x2F;linux -fPIC  -c jnitest.c </span><br><span class="line">gcc -shared jnitest.o -o jnitest.so</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">java -Djava.library.path&#x3D;&#x2F;home&#x2F;jni JniTest</span><br><span class="line"></span><br><span class="line">或者</span><br><span class="line">java JniTest</span><br><span class="line"></span><br><span class="line">Hello, World JNI</span><br><span class="line">Hello World</span><br></pre></td></tr></table></figure>
+
+
+
+<p>gcc 与 g++ 分别是 gnu 的 c &amp; c++ 编译器</p>
+<p><strong>-o</strong></p>
+<p>制定目标名称, 默认的时候, gcc 编译出来的文件是 a.out, 很难听, 如果你和我有同感，改掉它, 哈哈</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>-shared</td>
+<td>生成共享目标文件。通常用在建立共享库时。</td>
+</tr>
+<tr>
+<td>-o FILE</td>
+<td>生成指定的输出文件。用在生成可执行文件时。</td>
+</tr>
+<tr>
+<td>-I $JAVA_HOME/include -I $JAVA_HOME/include/linux</td>
+<td>表示将$JAVA_HOME/include目录作为第一个寻找头文件的目录</td>
+</tr>
+</tbody></table>
+<p>修改程序在，通过System.loadLibrary(“jnites”)方法来加载动态链接库jnitest.so</p>
+<p>可以使用java.library.path系统属性指定库的路径</p>
+<h3><span id="c调用java">C调用Java</span></h3><hr>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">&#x2F;&#x2F; foo.c</span><br><span class="line">#include &lt;stdio.h&gt;</span><br><span class="line">#include &quot;org_example_Foo.h&quot;</span><br><span class="line"></span><br><span class="line">JNIEXPORT void JNICALL Java_org_example_Foo_bar__Ljava_lang_String_2Ljava_lang_Object_2</span><br><span class="line">  (JNIEnv *env, jobject thisObject, jstring str, jobject obj) &#123;</span><br><span class="line">  jclass cls &#x3D; (*env)-&gt;GetObjectClass(env, thisObject);</span><br><span class="line">  jfieldID fieldID &#x3D; (*env)-&gt;GetFieldID(env, cls, &quot;j&quot;, &quot;I&quot;);</span><br><span class="line">  if((*env)-&gt;ExceptionOccurred(env)) &#123;</span><br><span class="line">    printf(&quot;Exception!\n&quot;);</span><br><span class="line">    (*env)-&gt;ExceptionClear(env);</span><br><span class="line">  &#125;</span><br><span class="line">  fieldID &#x3D; (*env)-&gt;GetFieldID(env, cls, &quot;i&quot;, &quot;I&quot;);</span><br><span class="line">  jint value &#x3D; (*env)-&gt;GetIntField(env, thisObject, fieldID);</span><br><span class="line">  &#x2F;&#x2F; we should put an exception guard here as well.</span><br><span class="line">  printf(&quot;Hello, World 0x%x\n&quot;, value);</span><br><span class="line">  return;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h2><span id="jni-fuse">JNI-FUSE</span></h2><p>FUSE(Filesystem in user space)，顾名思义，是用户空间文件系统。</p>
+<h3><span id="从mount挂在说起">从mount挂在说起</span></h3><p>Linux使用mount命令查看系统挂在了哪些文件系统</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">[root@node25 home]# mount</span><br><span class="line">sysfs on &#x2F;sys type sysfs (rw,nosuid,nodev,noexec,relatime,seclabel)</span><br><span class="line">proc on &#x2F;proc type proc (rw,nosuid,nodev,noexec,relatime)</span><br><span class="line">devtmpfs on &#x2F;dev type devtmpfs (rw,nosuid,seclabel,size&#x3D;2001012k,nr_inodes&#x3D;500253,mode&#x3D;755)</span><br><span class="line">securityfs on &#x2F;sys&#x2F;kernel&#x2F;security type securityfs (rw,nosuid,nodev,noexec,relatime)</span><br><span class="line">tmpfs on &#x2F;dev&#x2F;shm type tmpfs (rw,nosuid,nodev,seclabel)</span><br><span class="line">devpts on &#x2F;dev&#x2F;pts type devpts (rw,nosuid,noexec,relatime,seclabel,gid&#x3D;5,mode&#x3D;620,ptmxmode&#x3D;000)</span><br><span class="line">tmpfs on &#x2F;run type tmpfs (rw,nosuid,nodev,seclabel,mode&#x3D;755)</span><br><span class="line">tmpfs on &#x2F;sys&#x2F;fs&#x2F;cgroup type tmpfs (ro,nosuid,nodev,noexec,seclabel,mode&#x3D;755)</span><br><span class="line">cgroup on &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;systemd type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,xattr,release_agent&#x3D;&#x2F;usr&#x2F;lib&#x2F;systemd&#x2F;systemd-cgroups-agent,name&#x3D;systemd)</span><br><span class="line">pstore on &#x2F;sys&#x2F;fs&#x2F;pstore type pstore (rw,nosuid,nodev,noexec,relatime)</span><br><span class="line">cgroup on &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;net_cls,net_prio type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,net_prio,net_cls)</span><br><span class="line">cgroup on &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;hugetlb type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,hugetlb)</span><br><span class="line">cgroup on &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;memory type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,memory)</span><br><span class="line">cgroup on &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;pids type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,pids)</span><br><span class="line">cgroup on &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;devices type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,devices)</span><br><span class="line">cgroup on &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;blkio type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,blkio)</span><br><span class="line">cgroup on &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;freezer type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,freezer)</span><br><span class="line">cgroup on &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;cpu,cpuacct type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,cpuacct,cpu)</span><br><span class="line">cgroup on &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;cpuset type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,cpuset)</span><br><span class="line">cgroup on &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;perf_event type cgroup (rw,nosuid,nodev,noexec,relatime,seclabel,perf_event)</span><br><span class="line">configfs on &#x2F;sys&#x2F;kernel&#x2F;config type configfs (rw,relatime)</span><br><span class="line">&#x2F;dev&#x2F;mapper&#x2F;centos-root on &#x2F; type xfs (rw,relatime,seclabel,attr2,inode64,noquota)</span><br><span class="line">selinuxfs on &#x2F;sys&#x2F;fs&#x2F;selinux type selinuxfs (rw,relatime)</span><br><span class="line">systemd-1 on &#x2F;proc&#x2F;sys&#x2F;fs&#x2F;binfmt_misc type autofs (rw,relatime,fd&#x3D;22,pgrp&#x3D;1,timeout&#x3D;0,minproto&#x3D;5,maxproto&#x3D;5,direct,pipe_ino&#x3D;25095)</span><br><span class="line">hugetlbfs on &#x2F;dev&#x2F;hugepages type hugetlbfs (rw,relatime,seclabel)</span><br><span class="line">mqueue on &#x2F;dev&#x2F;mqueue type mqueue (rw,relatime,seclabel)</span><br><span class="line">debugfs on &#x2F;sys&#x2F;kernel&#x2F;debug type debugfs (rw,relatime)</span><br><span class="line">&#x2F;dev&#x2F;sda1 on &#x2F;boot type xfs (rw,relatime,seclabel,attr2,inode64,noquota)</span><br><span class="line">tmpfs on &#x2F;run&#x2F;user&#x2F;0 type tmpfs (rw,nosuid,nodev,relatime,seclabel,size&#x3D;402636k,mode&#x3D;700)</span><br><span class="line">[root@node25 home]#</span><br></pre></td></tr></table></figure>
+
+
+
+<p>sysfs on /sys type sysfs (ro,nosuid,nodev,noexec,relatime)</p>
+<ul>
+<li><code>sysfs</code>：文件系统<strong>名称</strong>；</li>
+<li><code>/sys</code> ：文件系统目录<strong>挂载点</strong>；</li>
+<li><code>sysfs</code>：文件系统<strong>类型</strong></li>
+<li><code>(ro,nosuid,nodev,noexec,relatime)</code>：挂载参数</li>
+</ul>
+<p>挂在</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mount -t ext4 &#x2F;dev&#x2F;sdb1 &#x2F;mnt&#x2F;</span><br></pre></td></tr></table></figure>
+
+<p>卸载</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">umount &#x2F;mnt</span><br></pre></td></tr></table></figure>
+
+
+
+<p>df命令也可以查看</p>
+<ul>
+<li>-T 参数能够让你看到所有的文件系统实例的类型；</li>
+<li>-h 参数能够以更符合人类的友好的形式展示数据；</li>
+<li>-a 参数展示所有的文件系统，包括 0 Blocks 的文件系统（默认是会过滤掉的）；</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">[root@node25 home]# df -Tha</span><br><span class="line">Filesystem              Type        Size  Used Avail Use% Mounted on</span><br><span class="line">rootfs                  -              -     -     -    - &#x2F;</span><br><span class="line">sysfs                   sysfs          0     0     0    - &#x2F;sys</span><br><span class="line">proc                    proc           0     0     0    - &#x2F;proc</span><br><span class="line">devtmpfs                devtmpfs    2.0G     0  2.0G   0% &#x2F;dev</span><br><span class="line">securityfs              securityfs     0     0     0    - &#x2F;sys&#x2F;kernel&#x2F;security</span><br><span class="line">tmpfs                   tmpfs       2.0G     0  2.0G   0% &#x2F;dev&#x2F;shm</span><br><span class="line">devpts                  devpts         0     0     0    - &#x2F;dev&#x2F;pts</span><br><span class="line">tmpfs                   tmpfs       2.0G   12M  2.0G   1% &#x2F;run</span><br><span class="line">tmpfs                   tmpfs       2.0G     0  2.0G   0% &#x2F;sys&#x2F;fs&#x2F;cgroup</span><br><span class="line">cgroup                  cgroup         0     0     0    - &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;systemd</span><br><span class="line">pstore                  pstore         0     0     0    - &#x2F;sys&#x2F;fs&#x2F;pstore</span><br><span class="line">cgroup                  cgroup         0     0     0    - &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;net_cls,net_prio</span><br><span class="line">cgroup                  cgroup         0     0     0    - &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;hugetlb</span><br><span class="line">cgroup                  cgroup         0     0     0    - &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;memory</span><br><span class="line">cgroup                  cgroup         0     0     0    - &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;pids</span><br><span class="line">cgroup                  cgroup         0     0     0    - &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;devices</span><br><span class="line">cgroup                  cgroup         0     0     0    - &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;blkio</span><br><span class="line">cgroup                  cgroup         0     0     0    - &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;freezer</span><br><span class="line">cgroup                  cgroup         0     0     0    - &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;cpu,cpuacct</span><br><span class="line">cgroup                  cgroup         0     0     0    - &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;cpuset</span><br><span class="line">cgroup                  cgroup         0     0     0    - &#x2F;sys&#x2F;fs&#x2F;cgroup&#x2F;perf_event</span><br><span class="line">configfs                configfs       0     0     0    - &#x2F;sys&#x2F;kernel&#x2F;config</span><br><span class="line">&#x2F;dev&#x2F;mapper&#x2F;centos-root xfs          17G   15G  2.2G  88% &#x2F;</span><br><span class="line">selinuxfs               selinuxfs      0     0     0    - &#x2F;sys&#x2F;fs&#x2F;selinux</span><br><span class="line">systemd-1               autofs         0     0     0    - &#x2F;proc&#x2F;sys&#x2F;fs&#x2F;binfmt_misc</span><br><span class="line">hugetlbfs               hugetlbfs      0     0     0    - &#x2F;dev&#x2F;hugepages</span><br><span class="line">mqueue                  mqueue         0     0     0    - &#x2F;dev&#x2F;mqueue</span><br><span class="line">debugfs                 debugfs        0     0     0    - &#x2F;sys&#x2F;kernel&#x2F;debug</span><br><span class="line">&#x2F;dev&#x2F;sda1               xfs        1014M  133M  882M  14% &#x2F;boot</span><br><span class="line">tmpfs                   tmpfs       394M     0  394M   0% &#x2F;run&#x2F;user&#x2F;0</span><br><span class="line">[root@node25 home]#</span><br></pre></td></tr></table></figure>
+
+
+
+<p>文件系统挂载可以通过 <code>mount</code> 命令直接挂载，但是 <code>mount</code> 命令挂载并没有持久化，关机重启就没了。<strong>所以想要关机重启之后，还能自动挂载到指定目录，那么就要把挂载规则写到 <code>/etc/fstab</code> 文件中</strong></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">[root@node25 home]# cat &#x2F;etc&#x2F;fstab </span><br><span class="line"></span><br><span class="line">#</span><br><span class="line"># &#x2F;etc&#x2F;fstab</span><br><span class="line"># Created by anaconda on Thu Apr  2 21:53:10 2020</span><br><span class="line">#</span><br><span class="line"># Accessible filesystems, by reference, are maintained under &#39;&#x2F;dev&#x2F;disk&#39;</span><br><span class="line"># See man pages fstab(5), findfs(8), mount(8) and&#x2F;or blkid(8) for more info</span><br><span class="line">#</span><br><span class="line">&#x2F;dev&#x2F;mapper&#x2F;centos-root &#x2F;                       xfs     defaults        0 0</span><br><span class="line">UUID&#x3D;cb5a58dc-1df2-4de4-8b27-68adee337a72 &#x2F;boot                   xfs     defaults        0 0</span><br><span class="line">&#x2F;dev&#x2F;mapper&#x2F;centos-swap swap                    swap    defaults        0 0</span><br><span class="line">[root@node25 home]#</span><br></pre></td></tr></table></figure>
+
+<p>&lt;设备标识&gt;    &lt;挂载目录&gt;     &lt;文件系统类型&gt;  &lt;挂载参数&gt;       &lt;dump选项&gt; &lt;fsck选项&gt;</p>
+<p>从左到右参数拆解：</p>
+<ul>
+<li><strong>设备标识</strong>：能够标识到唯一的文件系统所在的设备，这里可以是设备路径，也可以是 LABEL，或者 UUID；</li>
+<li><strong>挂载目录</strong>：文件系统挂载的目录点；</li>
+<li><strong>文件系统类型</strong>：比如 ext4，ext2，xfs 之类的；</li>
+<li><strong>挂载参数</strong>：可以填 defaults，也可以精细化配置，比如只读还是可写（rw/ro），同步刷盘还是异步（async/sync），等等；</li>
+<li><strong>dump选项</strong>：让你能控制文件系统备份的频率，0 表示不备份；</li>
+<li><strong>fsck选项</strong>：让你控制是否开机用 fsck 自检，0 表示不要；</li>
+</ul>
+<p><strong>查看内核支持的文件系统</strong></p>
+<p>ls /lib/modules/${kernel_version}/kernel/fs/</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br></pre></td><td class="code"><pre><span class="line">[root@node25 home]# ls &#x2F;lib&#x2F;modules&#x2F;3.10.0-957.el7.x86_64&#x2F;kernel&#x2F;fs</span><br><span class="line">binfmt_misc.ko.xz  btrfs  cachefiles  ceph  cifs  cramfs  dlm  exofs  ext4  fat  fscache  fuse  gfs2  isofs  jbd2  lockd  mbcache.ko.xz  nfs  nfs_common  nfsd  nls  overlayfs  pstore  squashfs  udf  xfs</span><br><span class="line">[root@node25 home]# ls &#x2F;lib&#x2F;modules&#x2F;3.10.0-957.el7.x86_64&#x2F;kernel&#x2F;fs&#x2F;ext4</span><br><span class="line">ext4.ko.xz</span><br><span class="line">[root@node25 home]#</span><br><span class="line">[root@node25 home]# lsmod </span><br><span class="line">Module                  Size  Used by</span><br><span class="line">binfmt_misc            17468  1 </span><br><span class="line">vmw_vsock_vmci_transport    30577  1 </span><br><span class="line">vsock                  36526  2 vmw_vsock_vmci_transport</span><br><span class="line">iosf_mbi               15582  0 </span><br><span class="line">crc32_pclmul           13133  0 </span><br><span class="line">snd_seq_midi           13565  0 </span><br><span class="line">ppdev                  17671  0 </span><br><span class="line">ghash_clmulni_intel    13273  0 </span><br><span class="line">snd_seq_midi_event     14899  1 snd_seq_midi</span><br><span class="line">aesni_intel           189414  0 </span><br><span class="line">lrw                    13286  1 aesni_intel</span><br><span class="line">gf128mul               15139  1 lrw</span><br><span class="line">glue_helper            13990  1 aesni_intel</span><br><span class="line">ablk_helper            13597  1 aesni_intel</span><br><span class="line">cryptd                 21190  3 ghash_clmulni_intel,aesni_intel,ablk_helper</span><br><span class="line">vmw_balloon            18094  0 </span><br><span class="line">joydev                 17389  0 </span><br><span class="line">pcspkr                 12718  0 </span><br><span class="line">snd_ens1371            25076  0 </span><br><span class="line">snd_rawmidi            31294  2 snd_ens1371,snd_seq_midi</span><br><span class="line">snd_ac97_codec        130556  1 snd_ens1371</span><br><span class="line">ac97_bus               12730  1 snd_ac97_codec</span><br><span class="line">snd_seq                62663  2 snd_seq_midi_event,snd_seq_midi</span><br><span class="line">snd_seq_device         14356  3 snd_seq,snd_rawmidi,snd_seq_midi</span><br><span class="line">snd_pcm               105708  2 snd_ac97_codec,snd_ens1371</span><br><span class="line">snd_timer              29912  2 snd_pcm,snd_seq</span><br><span class="line">snd                    83815  7 snd_ac97_codec,snd_timer,snd_pcm,snd_seq,snd_rawmidi,snd_ens1371,snd_seq_device</span><br><span class="line">soundcore              15047  1 snd</span><br><span class="line">sg                     40721  0 </span><br><span class="line">parport_pc             28205  0 </span><br><span class="line">parport                46395  2 ppdev,parport_pc</span><br><span class="line">i2c_piix4              22401  0 </span><br><span class="line">vmw_vmci               67127  1 vmw_vsock_vmci_transport</span><br><span class="line">ip_tables              27126  0 </span><br><span class="line">xfs                   997127  2 </span><br><span class="line">libcrc32c              12644  1 xfs</span><br><span class="line">sr_mod                 22416  0 </span><br><span class="line">cdrom                  42556  1 sr_mod</span><br><span class="line">sd_mod                 46281  3 </span><br><span class="line">crc_t10dif             12912  1 sd_mod</span><br><span class="line">crct10dif_generic      12647  0 </span><br><span class="line">crct10dif_pclmul       14307  1 </span><br><span class="line">crct10dif_common       12595  3 crct10dif_pclmul,crct10dif_generic,crc_t10dif</span><br><span class="line">crc32c_intel           22094  1 </span><br><span class="line">serio_raw              13434  0 </span><br><span class="line">ata_generic            12923  0 </span><br><span class="line">pata_acpi              13053  0 </span><br><span class="line">vmwgfx                276430  1 </span><br><span class="line">drm_kms_helper        179394  1 vmwgfx</span><br><span class="line">syscopyarea            12529  1 drm_kms_helper</span><br><span class="line">sysfillrect            12701  1 drm_kms_helper</span><br><span class="line">sysimgblt              12640  1 drm_kms_helper</span><br><span class="line">fb_sys_fops            12703  1 drm_kms_helper</span><br><span class="line">ttm                   114635  1 vmwgfx</span><br><span class="line">drm                   429744  4 ttm,drm_kms_helper,vmwgfx</span><br><span class="line">ata_piix               35052  0 </span><br><span class="line">libata                243133  3 pata_acpi,ata_generic,ata_piix</span><br><span class="line">e1000                 137586  0 </span><br><span class="line">mptspi                 22628  2 </span><br><span class="line">scsi_transport_spi     30732  1 mptspi</span><br><span class="line">mptscsih               40150  1 mptspi</span><br><span class="line">nfit                   55016  0 </span><br><span class="line">mptbase               106036  2 mptspi,mptscsih</span><br><span class="line">drm_panel_orientation_quirks    12957  1 drm</span><br><span class="line">libnvdimm             147731  1 nfit</span><br><span class="line">dm_mirror              22289  0 </span><br><span class="line">dm_region_hash         20813  1 dm_mirror</span><br><span class="line">dm_log                 18411  2 dm_region_hash,dm_mirror</span><br><span class="line">dm_mod                124407  8 dm_log,dm_mirror</span><br><span class="line">[root@node25 home]#</span><br></pre></td></tr></table></figure>
+
+<p><strong>ko</strong> 其实是 <strong>kernel object</strong> 的缩写，这类文件存在的意义其实和用户态的 .so 库类似，都是为了模块化的编程实践。内核把核心主干框架之外的功能拆解成模块，需要的时候就加载 ko 模块，不需要的时候卸载即可。<strong>这样带来的好处就是方便开发和使用，保持内核的核心代码极度精炼。</strong></p>
+<p>如果想看内核已经加载的内核模块，可以调用 <code>lsmod</code> 看到。</p>
+<h3><span id="文件系统">文件系统</span></h3><hr>
+<p>内核文件系统</p>
+<p>内核文件系统位于 vfs 之下，块存储模块之上的一个位置。对外呈现文件存储实现，对下管理裸块设备。</p>
+<p>用户态（用户空间）文件系统</p>
+<h3><span id="fuse">FUSE</span></h3><hr>
+<p><strong>FUSE 是一个用来实现用户态文件系统的框架</strong>，这套 FUSE 框架包含 3 个组件：</p>
+<ol>
+<li><strong>内核模块 <code>fuse.ko</code></strong> ：用来接收 vfs 传递下来的 IO 请求，并且把这个 IO 封装之后通过管道发送到用户态；</li>
+<li><strong>用户态 lib 库 <code>libfuse</code></strong> ：解析内核态转发出来的协议包，拆解成常规的 IO 请求；</li>
+<li><strong>mount 工具 <code>fusermount</code></strong> ；</li>
+</ol>
+<h4><span id="请求">请求</span></h4><hr>
+<p>FUSE 请求包分为两部分：</p>
+<ol>
+<li><code>Header</code> ：这个是所有请求共用的，比如 <code>open</code> 请求，<code>read</code> 请求，<code>write</code> 请求，<code>getxattr</code> 请求，头部都至少有这个结构体，<code>Header</code> 结构体能描述整个 FUSE 请求，其中字段能区分请求类型；</li>
+<li><code>Payload</code> ：这个东西是每个 IO 类型会是不同的，比如 <code>read</code> 请求就没这个，<code>write</code> 请求就有这个，因为 <code>write</code> 请求是携带数据的；</li>
+</ol>
+<p>Header</p>
+<p><strong>type</strong> inHeader <strong>struct</strong> {<br> Len  <strong>uint32</strong><br> Opcode <strong>uint32</strong><br> Unique <strong>uint64</strong><br> Nodeid <strong>uint64</strong><br> Uid  <strong>uint32</strong><br> Gid  <strong>uint32</strong><br> Pid  <strong>uint32</strong><br> _   <strong>uint32</strong><br>}</p>
+<ul>
+<li>Len: 是整个请求的字节数长度（<code>Header</code> + <code>Payload</code>）</li>
+<li>Opcode: 请求的类型，比如区分 open、read、write 等等；</li>
+<li>Unique: 请求唯一标识（和响应中要对应）</li>
+<li>Nodeid: 请求针对的文件 nodeid，目标文件或者文件夹的 nodeid；</li>
+<li>Uid: 文件/文件夹操作的进程的用户ID</li>
+<li>Gid: 文件/文件夹操作的进程的用户组ID</li>
+<li>Pid: 文件/文件夹操作的进程的进程ID</li>
+</ul>
+<h4><span id="响应">响应</span></h4><hr>
+<p>FUSE 响应包也分为两部分：</p>
+<ul>
+<li><code>Header</code> ：这个结构体也是在数据头部的，所有 IO 类型的响应都至少有这个结构体。该结构体用于描述整个响应请求；</li>
+<li><code>Payload</code> ：每个请求的类型可能不同，比如 <code>read</code> 请求就会有这个，因为要携带 <code>read</code> 出来的用户数据，<code>write</code> 请求就不会有；</li>
+</ul>
+<p><strong>type</strong> outHeader <strong>struct</strong> {<br> Len  <strong>uint32</strong><br> Error <strong>int32</strong><br> Unique <strong>uint64</strong><br>}</p>
+<ul>
+<li>Len: 整个响应的字节数长度（ <code>Header</code> + <code>Payload</code> ）；</li>
+<li>Error: 响应错误码，成功返回 0，其他对应着系统的错误代码，负数；</li>
+<li>Unique: 对应者请求的唯一标识，和请求对应；</li>
+</ul>
+<h4><span id="devfuse">/dev/fuse</span></h4><hr>
+<p><strong><code>/dev/fuse</code> ，这个虚设备文件就是内核模块和用户程序的桥梁</strong></p>
+<p>用户的 io 通过正常的系统调用进来，走到内核文件系统 fuse ，fuse 文件系统把这个 io 请求封装起来，打包成特定的格式，通过 <code>/dev/fuse</code> 这个管道传递到用户态。在此之前有守护进程监听这个管道，看到有消息出来之后，立马读出来，然后利用 <code>libfuse</code> 库解析协议，之后就是用户文件系统的代码逻辑了。</p>
+<h4><span id="使用">使用</span></h4><hr>
+<p>判断 Linux 内核是否支持 fuse</p>
+<p>modprobe fuse</p>
+<p>挂载 fuse 内核文件系统，便于管理</p>
+<p>mount -t fusectl none /sys/fs/fuse/connections</p>
+<p>通过挂载内核 fuse 文件系统，可以看到所有实现的用户文件系统</p>
+<p>ls -l /sys/fs/fuse/connections/</p>
+<p>挂载用户文件系统</p>
+<p>fusermount -o fsname=helloworld,subtype=hellofs – /mnt/myfs/</p>
+<p>实现了 FUSE 的用户态文件系统有非常多的例子，比如，GlusterFS，SSHFS，CephFS，Lustre，GmailFS，EncFS，S3FS、、、等等</p>
+<h3><span id="java开发fuse文件系统">Java开发Fuse文件系统</span></h3><hr>
+<h2><span id="alluxio-jni-fuse">Alluxio JNI Fuse</span></h2><p>学习Alluxio的源码，了解Alluxio的JNI-FUSE实现。</p>
+<p>Alluxio FUSE首先需要主动通过JNR-FUSE或JNI-FUSE调用libfuse的fuse_main_real方法，注册挂载点和每个fuse operation回调函数，然后Alluxio FUSE会打开<strong>/dev/fuse</strong>，返回文件描述符<strong>fd</strong>，等待读取来自<strong>FUS</strong>E设备的请求。fd在进程内共享，在进程间不共享，因此FUSE支持<strong>multi-thread</strong>模式，也支持多个FUSE服务程序，创建多个相互隔离的挂载点。</p>
+<p>同时，JNI-FUSE模块的输出文件jar内包含着linux和macosx的libjnifuse共享库，使用 JNI-FUSE 时，无需指定 java.library.path 参数，对 libjnifuse 文件透明。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">&lt;build&gt;</span><br><span class="line">        &lt;plugins&gt;</span><br><span class="line">          &lt;plugin&gt;</span><br><span class="line">            &lt;groupId&gt;org.apache.maven.plugins&lt;&#x2F;groupId&gt;</span><br><span class="line">            &lt;artifactId&gt;maven-antrun-plugin&lt;&#x2F;artifactId&gt;</span><br><span class="line">            &lt;executions&gt;</span><br><span class="line">              &lt;execution&gt;</span><br><span class="line">                &lt;id&gt;native_fuse_compile&lt;&#x2F;id&gt;</span><br><span class="line">                &lt;phase&gt;compile&lt;&#x2F;phase&gt;</span><br><span class="line">                &lt;goals&gt;&lt;goal&gt;run&lt;&#x2F;goal&gt;&lt;&#x2F;goals&gt;</span><br><span class="line">                &lt;configuration&gt;</span><br><span class="line">                  &lt;target&gt;</span><br><span class="line">                    &lt;mkdir dir&#x3D;&quot;$&#123;project.build.directory&#125;&#x2F;native&quot; &#x2F;&gt;</span><br><span class="line">                    &lt;exec executable&#x3D;&quot;make&quot; failonerror&#x3D;&quot;true&quot; dir&#x3D;&quot;$&#123;project.build.directory&#125;&#x2F;native&quot;&gt;</span><br><span class="line">                      &lt;arg line&#x3D;&quot;-f $&#123;project.basedir&#125;&#x2F;src&#x2F;main&#x2F;native&#x2F;libjnifuse&#x2F;Makefile&quot; &#x2F;&gt;</span><br><span class="line">                    &lt;&#x2F;exec&gt;</span><br><span class="line">                  &lt;&#x2F;target&gt;</span><br><span class="line">                &lt;&#x2F;configuration&gt;</span><br><span class="line">              &lt;&#x2F;execution&gt;</span><br><span class="line">            &lt;&#x2F;executions&gt;</span><br><span class="line">          &lt;&#x2F;plugin&gt;</span><br><span class="line">        &lt;&#x2F;plugins&gt;</span><br><span class="line">      &lt;&#x2F;build&gt;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>MakeFile</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">#</span><br><span class="line"># The Alluxio Open Foundation licenses this work under the Apache License, version 2.0</span><br><span class="line"># (the &quot;License&quot;). You may not use this work except in compliance with the License, which is</span><br><span class="line"># available at www.apache.org&#x2F;licenses&#x2F;LICENSE-2.0</span><br><span class="line">#</span><br><span class="line"># This software is distributed on an &quot;AS IS&quot; basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,</span><br><span class="line"># either express or implied, as more fully set forth in the License.</span><br><span class="line">#</span><br><span class="line"># See the NOTICE file distributed with this work for information regarding copyright ownership.</span><br><span class="line"></span><br><span class="line">CXX :&#x3D; g++</span><br><span class="line">UNAME :&#x3D; $(shell uname)</span><br><span class="line">INCDIR &#x3D; -I &#x2F;usr&#x2F;include -I $(JAVA_HOME)&#x2F;include -I .&#x2F;</span><br><span class="line">FUSE_LIBS &#x3D; $(shell pkg-config fuse --libs)</span><br><span class="line">FUSE_CXXFLAGS &#x3D; $(shell pkg-config fuse --cflags)</span><br><span class="line"></span><br><span class="line"># Linux</span><br><span class="line">ifeq ($(UNAME), Linux)</span><br><span class="line">	INCDIR +&#x3D; -I $(JAVA_HOME)&#x2F;include&#x2F;linux</span><br><span class="line">	TARGET_LIB :&#x3D; libjnifuse.so</span><br><span class="line">endif</span><br><span class="line"># MacOS</span><br><span class="line">ifeq ($(UNAME), Darwin)</span><br><span class="line">	INCDIR +&#x3D; -I $(JAVA_HOME)&#x2F;include&#x2F;darwin</span><br><span class="line">	TARGET_LIB :&#x3D; libjnifuse.dylib</span><br><span class="line">endif</span><br><span class="line"></span><br><span class="line">CXXFLAGS &#x3D; -std&#x3D;c++11 -Wall -fPIC -D_FILE_OFFSET_BITS&#x3D;64 $&#123;INCDIR&#125; $&#123;FUSE_CXXFLAGS&#125;</span><br><span class="line">LDFLAGS &#x3D; -shared $&#123;FUSE_LIBS&#125;</span><br><span class="line">OUTPUT_DIR ?&#x3D; .</span><br><span class="line">SRC_DIR ?&#x3D; ..&#x2F;..&#x2F;src&#x2F;main&#x2F;native&#x2F;libjnifuse</span><br><span class="line">OBJS&#x3D; $(addprefix $(OUTPUT_DIR)&#x2F;, $(patsubst %.cc,%.o,$(notdir $(wildcard $(SRC_DIR)&#x2F;*.cc))))</span><br><span class="line"></span><br><span class="line">$&#123;TARGET_LIB&#125;: $&#123;OBJS&#125;</span><br><span class="line">	$&#123;CXX&#125; $&#123;CXXFLAGS&#125; -o $&#123;OUTPUT_DIR&#125;&#x2F;$&#123;TARGET_LIB&#125; $&#123;OBJS&#125; $&#123;LDFLAGS&#125;</span><br><span class="line"></span><br><span class="line">install: $&#123;TARGET_LIB&#125;</span><br><span class="line">	sudo mv $&#123;TARGET_LIB&#125; &#x2F;usr&#x2F;lib&#x2F;</span><br><span class="line"></span><br><span class="line">clean:</span><br><span class="line">	rm -rf $&#123;OBJS&#125; $&#123;OUTPUT_DIR&#125;&#x2F;$&#123;TARGET_LIB&#125;</span><br><span class="line"></span><br><span class="line">$&#123;OUTPUT_DIR&#125;&#x2F;%.o: $&#123;SRC_DIR&#125;&#x2F;%.cc</span><br><span class="line">	$&#123;CXX&#125; $&#123;CXXFLAGS&#125; -o $@ -c $&lt;</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+
+
+<p>当一个应用程序，比如mkdir调用 syc_mkdir 想要在FUSE挂载点之下创建文件夹时，内核态VFS发现这个挂载点对应的是FUSE类型，则构造一个<strong>FUSE_MKDIR</strong>的 fuse_req，投递到<strong>pending</strong>队列里。</p>
+<p>libfuse启动的读取到fuse设备的请求后，会执行<strong>fuse_lib_mkdir</strong>操作，这个操作会回调到mount时给定的回调函数里，再由JNI-FUSE转而回调到<strong>AlluxioJNIFuseFilesystem</strong>中的mkdir方法，最后，mkdir方法体中会通知Alluxio的master创建文件夹，当完成操作后，会回复ok给fuse设备，这样fuse_mkdir则会返回给调用者，文件夹创建成功。</p>
+<p>首先，AlluxioFuse会通过调用native函数<strong>fuse_main_real</strong>, 进行文件系统挂载。Native 代码会调用libfuse中的fuse_main_real方法，向kernel注册挂载点以及回调函数指针。</p>
+<p>此时，如果一个mkdir操作发生在 这个FUSE挂载点，则AlluxioFuse会收到这个通知，相应的挂载函数，<strong>jnifuse_oper_mkdir</strong>指向的<strong>mkdir_wrapper</strong>会被调用。最后这个mkdir 请求会反向调用JAVA代码中相应的FS实现函数mkdir，执行真正的实现逻辑。</p>
+<p>alluxio.jnifuse.FuseFileSystem</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * The Alluxio Open Foundation licenses this work under the Apache License, version 2.0</span></span><br><span class="line"><span class="comment"> * (the "License"). You may not use this work except in compliance with the License, which is</span></span><br><span class="line"><span class="comment"> * available at www.apache.org/licenses/LICENSE-2.0</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * This software is distributed on an "AS IS" basis, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,</span></span><br><span class="line"><span class="comment"> * either express or implied, as more fully set forth in the License.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * See the NOTICE file distributed with this work for information regarding copyright ownership.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">package</span> alluxio.jnifuse;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> alluxio.jnifuse.struct.FileStat;</span><br><span class="line"><span class="keyword">import</span> alluxio.jnifuse.struct.FuseContext;</span><br><span class="line"><span class="keyword">import</span> alluxio.jnifuse.struct.FuseFileInfo;</span><br><span class="line"><span class="keyword">import</span> alluxio.jnifuse.struct.Statvfs;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.nio.ByteBuffer;</span><br><span class="line"><span class="keyword">import</span> java.util.concurrent.ThreadLocalRandom;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">FuseFileSystem</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">getattr</span><span class="params">(String path, FileStat stat)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"getattr"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">mkdir</span><span class="params">(String path, <span class="keyword">long</span> mode)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"mkdir"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">unlink</span><span class="params">(String path)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"unlink"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">rmdir</span><span class="params">(String path)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"rmdir"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">symlink</span><span class="params">(String oldpath, String newpath)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"symlink"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">rename</span><span class="params">(String oldpath, String newpath)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"rename"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">link</span><span class="params">(String oldpath, String newpath)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"link"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">chmod</span><span class="params">(String path, <span class="keyword">long</span> mode)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"chmod"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">chown</span><span class="params">(String path, <span class="keyword">long</span> uid, <span class="keyword">long</span> gid)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"chown"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">truncate</span><span class="params">(String path, <span class="keyword">long</span> size)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"truncate"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">open</span><span class="params">(String path, FuseFileInfo fi)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"open"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">read</span><span class="params">(String path, ByteBuffer buf, <span class="keyword">long</span> size, <span class="keyword">long</span> offset, FuseFileInfo fi)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"read"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">write</span><span class="params">(String path, ByteBuffer buf, <span class="keyword">long</span> size, <span class="keyword">long</span> offset, FuseFileInfo fi)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"write"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">statfs</span><span class="params">(String path, Statvfs stbuf)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"statfs"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">flush</span><span class="params">(String path, FuseFileInfo fi)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"flush"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">release</span><span class="params">(String path, FuseFileInfo fi)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"release"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">opendir</span><span class="params">(String path, FuseFileInfo fi)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"opendir"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">readdir</span><span class="params">(String path, <span class="keyword">long</span> bufaddr, FuseFillDir filter, <span class="keyword">long</span> offset, FuseFileInfo fi)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"readdir"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">releasedir</span><span class="params">(String path, FuseFileInfo fi)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"releasedir"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> <span class="keyword">int</span> <span class="title">create</span><span class="params">(String path, <span class="keyword">long</span> mode, FuseFileInfo fi)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> UnsupportedOperationException(<span class="string">"create"</span>);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> FuseContext <span class="title">getContext</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">// <span class="doctag">TODO:</span> get real context</span></span><br><span class="line">    <span class="keyword">return</span> FuseContext.of(ByteBuffer.allocate(<span class="number">32</span>));</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">default</span> String <span class="title">getFileSystemName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="string">"fusefs"</span> + ThreadLocalRandom.current().nextInt();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>alluxio.jnifuse.AbstractFuseFileSystem</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">public abstract class AbstractFuseFileSystem implements FuseFileSystem &#123;</span><br><span class="line">  static &#123;</span><br><span class="line">    System.loadLibrary(&quot;jnifuse&quot;);</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>alluxio-integration-fuse子项目对应JNI实现</p>
+<img src="/images/alluxio-jni-fuse.png" width="74%" height="75%">
+
+
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">package alluxio.jnifuse;</span><br><span class="line"></span><br><span class="line">import java.nio.ByteBuffer;</span><br><span class="line"></span><br><span class="line">public class LibFuse &#123;</span><br><span class="line"></span><br><span class="line">  public native int fuse_main_real(AbstractFuseFileSystem fs, int argc, String[] argv);</span><br><span class="line"></span><br><span class="line">  public native ByteBuffer fuse_get_context();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<p>alluxio.fuse.AlluxioJniFuseFileSystem</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">@Override</span><br><span class="line">public int create(String path, long mode, FuseFileInfo fi) &#123;</span><br><span class="line">  return AlluxioFuseUtils.call(LOG, () -&gt; createInternal(path, mode, fi),</span><br><span class="line">      &quot;create&quot;, &quot;path&#x3D;%s,mode&#x3D;%o&quot;, path, mode);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>alluxio.fuse.AlluxioFuseUtils</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">call</span><span class="params">(Logger logger, FuseCallable callable, String methodName,</span></span></span><br><span class="line"><span class="function"><span class="params">    String description, Object... args)</span> </span>&#123;</span><br><span class="line">  String debugDesc = logger.isDebugEnabled() ? String.format(description, args) : <span class="keyword">null</span>;</span><br><span class="line">  logger.debug(<span class="string">"Enter: &#123;&#125;(&#123;&#125;)"</span>, methodName, debugDesc);</span><br><span class="line">  <span class="keyword">long</span> startMs = System.currentTimeMillis();</span><br><span class="line">  <span class="keyword">int</span> ret = callable.call();</span><br><span class="line">  <span class="keyword">long</span> durationMs = System.currentTimeMillis() - startMs;</span><br><span class="line">  logger.debug(<span class="string">"Exit (&#123;&#125;): &#123;&#125;(&#123;&#125;) in &#123;&#125; ms"</span>, ret, methodName, debugDesc, durationMs);</span><br><span class="line">  <span class="keyword">if</span> (durationMs &gt;= THRESHOLD) &#123;</span><br><span class="line">    logger.warn(<span class="string">"&#123;&#125;(&#123;&#125;) returned &#123;&#125; in &#123;&#125; ms (&gt;=&#123;&#125; ms)"</span>, methodName,</span><br><span class="line">        String.format(description, args), ret, durationMs, THRESHOLD);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">int</span> <span class="title">createInternal</span><span class="params">(String path, <span class="keyword">long</span> mode, FuseFileInfo fi)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">final</span> AlluxioURI uri = mPathResolverCache.getUnchecked(path);</span><br><span class="line">  <span class="keyword">if</span> (uri.getName().length() &gt; MAX_NAME_LENGTH) &#123;</span><br><span class="line">    LOG.error(<span class="string">"Failed to create &#123;&#125;: file name longer than &#123;&#125; characters"</span>,</span><br><span class="line">        path, MAX_NAME_LENGTH);</span><br><span class="line">    <span class="keyword">return</span> -ErrorCodes.ENAMETOOLONG();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    FileOutStream os = mFileSystem.createFile(uri,</span><br><span class="line">        CreateFilePOptions.newBuilder()</span><br><span class="line">            .setMode(<span class="keyword">new</span> Mode((<span class="keyword">short</span>) mode).toProto())</span><br><span class="line">            .build());</span><br><span class="line">    <span class="keyword">long</span> fid = mNextOpenFileId.getAndIncrement();</span><br><span class="line">    mCreateFileEntries.put(fid, os);</span><br><span class="line">    fi.fh.set(fid);</span><br><span class="line">    setUserGroupIfNeeded(uri);</span><br><span class="line">  &#125; <span class="keyword">catch</span> (Throwable e) &#123;</span><br><span class="line">    LOG.error(<span class="string">"Failed to create &#123;&#125;: "</span>, path, e);</span><br><span class="line">    <span class="keyword">return</span> -ErrorCodes.EIO();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">public interface FuseCallable &#123;</span><br><span class="line">  &#x2F;**</span><br><span class="line">   * The RPC implementation.</span><br><span class="line">   *</span><br><span class="line">   * @return the return value from the RPC</span><br><span class="line">   *&#x2F;</span><br><span class="line">  int call();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>alluxio-fuse.sh</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&#96;$ .&#x2F;bin&#x2F;alluxio-fuse.sh mount mount_point [alluxio_path]&#96;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">mount_fuse() &#123;</span><br><span class="line">  local mount_point&#x3D;$1</span><br><span class="line">  local alluxio_root&#x3D;$2</span><br><span class="line">  local full_mount_option&#x3D;&quot;&quot;</span><br><span class="line">  if [[ ! -z &quot;$&#123;mount_option&#125;&quot; ]]; then</span><br><span class="line">    full_mount_option&#x3D;&quot;big_writes,$&#123;mount_option&#125;&quot;</span><br><span class="line">  else</span><br><span class="line">    full_mount_option&#x3D;&quot;big_writes&quot;</span><br><span class="line">  fi</span><br><span class="line"></span><br><span class="line">  if [[ $&#123;NO_DAEMON&#125; -eq &quot;1&quot; ]]; then</span><br><span class="line">    ALLUXIO_FUSE_JAVA_OPTS+&#x3D;&quot; -Dalluxio.logger.type&#x3D;FUSE_LOGGER,Console&quot;</span><br><span class="line">  fi</span><br><span class="line"></span><br><span class="line">  local cmd&#x3D;&quot;$&#123;JAVA&#125; -cp $&#123;CLASSPATH&#125; $&#123;JAVA_OPTS&#125; $&#123;ALLUXIO_FUSE_JAVA_OPTS&#125; \</span><br><span class="line">    alluxio.fuse.AlluxioFuse \</span><br><span class="line">    -o $&#123;full_mount_option&#125; \</span><br><span class="line">    -m $&#123;mount_point&#125; \</span><br><span class="line">    -r $&#123;alluxio_root&#125;&quot;</span><br><span class="line">  echo &quot;Starting AlluxioFuse process: mounting alluxio path \&quot;$&#123;alluxio_root&#125;\&quot; to local mount point \&quot;$&#123;mount_point&#125;\&quot; with options&#x3D;\&quot;$&#123;full_mount_option&#125;\&quot;&quot;</span><br><span class="line">  if [[ $&#123;NO_DAEMON&#125; -eq &quot;1&quot; ]]; then</span><br><span class="line">    exec $&#123;cmd&#125;</span><br><span class="line">  else</span><br><span class="line">    (nohup $&#123;cmd&#125; &gt; $&#123;ALLUXIO_LOGS_DIR&#125;&#x2F;fuse.out 2&gt;&amp;1) &amp;</span><br><span class="line">    # sleep: workaround to let the bg java process exit on errors, if any</span><br><span class="line">    sleep 2s</span><br><span class="line">    if kill -0 $! &gt; &#x2F;dev&#x2F;null 2&gt;&amp;1 ; then</span><br><span class="line">      echo &quot;Successfully mounted Alluxio path \&quot;$&#123;alluxio_root&#125;\&quot; to $&#123;mount_point&#125;.&quot;</span><br><span class="line">      echo &quot;See $&#123;ALLUXIO_LOGS_DIR&#125;&#x2F;fuse.log for logging messages&quot;</span><br><span class="line">      return 0</span><br><span class="line">    else</span><br><span class="line">      echo &quot;Failed to mount Alluxio path \&quot;$&#123;alluxio_root&#125;\&quot; to $&#123;mount_point&#125;.&quot;</span><br><span class="line">      echo &quot;See $&#123;ALLUXIO_LOGS_DIR&#125;&#x2F;fuse.out for more details&quot;</span><br><span class="line">      return 1</span><br><span class="line">    fi</span><br><span class="line">  fi</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>alluxio.fuse.AlluxioFuse</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">    LOG.info(<span class="string">"Alluxio version: &#123;&#125;-&#123;&#125;"</span>, RuntimeConstants.VERSION, ProjectConstants.REVISION);</span><br><span class="line">    AlluxioConfiguration conf = InstancedConfiguration.defaults();</span><br><span class="line">    FileSystemContext fsContext = FileSystemContext.create(conf);</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      InetSocketAddress confMasterAddress =</span><br><span class="line">          fsContext.getMasterClientContext().getConfMasterInquireClient().getPrimaryRpcAddress();</span><br><span class="line">      RetryUtils.retry(<span class="string">"load cluster default configuration with master "</span> + confMasterAddress,</span><br><span class="line">          () -&gt; fsContext.getClientContext().loadConfIfNotLoaded(confMasterAddress),</span><br><span class="line">          RetryUtils.defaultClientRetry(</span><br><span class="line">              conf.getDuration(PropertyKey.USER_RPC_RETRY_MAX_DURATION),</span><br><span class="line">              conf.getDuration(PropertyKey.USER_RPC_RETRY_BASE_SLEEP_MS),</span><br><span class="line">              conf.getDuration(PropertyKey.USER_RPC_RETRY_MAX_SLEEP_MS)));</span><br><span class="line">    &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">      LOG.warn(<span class="string">"Failed to load cluster default configuration for Fuse process. "</span></span><br><span class="line">          + <span class="string">"Proceed with local configuration for FUSE: &#123;&#125;"</span>, e.toString());</span><br><span class="line">    &#125;</span><br><span class="line">    conf = fsContext.getClusterConf();</span><br><span class="line">    <span class="keyword">final</span> AlluxioFuseOptions opts = parseOptions(args, conf);</span><br><span class="line">    <span class="keyword">if</span> (opts == <span class="keyword">null</span>) &#123;</span><br><span class="line">      System.exit(<span class="number">1</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">try</span> (<span class="keyword">final</span> FileSystem fs = FileSystem.Factory.create(fsContext)) &#123;</span><br><span class="line">      <span class="keyword">final</span> List&lt;String&gt; fuseOpts = opts.getFuseOpts();</span><br><span class="line">      <span class="keyword">if</span> (conf.getBoolean(PropertyKey.FUSE_JNIFUSE_ENABLED)) &#123;</span><br><span class="line">        <span class="keyword">final</span> AlluxioJniFuseFileSystem fuseFs = <span class="keyword">new</span> AlluxioJniFuseFileSystem(fs, opts, conf);</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">          LOG.info(<span class="string">"Mounting AlluxioJniFuseFileSystem: mount point=\"&#123;&#125;\", OPTIONS=\"&#123;&#125;\""</span>,</span><br><span class="line">              opts.getMountPoint(), fuseOpts.toArray(<span class="keyword">new</span> String[<span class="number">0</span>]));</span><br><span class="line">          fuseFs.mount(<span class="keyword">true</span>, opts.isDebug(), fuseOpts.toArray(<span class="keyword">new</span> String[<span class="number">0</span>]));</span><br><span class="line">        &#125; <span class="keyword">catch</span> (FuseException e) &#123;</span><br><span class="line">          LOG.error(<span class="string">"Failed to mount &#123;&#125;"</span>, opts.getMountPoint(), e);</span><br><span class="line">          <span class="comment">// only try to umount file system when exception occurred.</span></span><br><span class="line">          <span class="comment">// jni-fuse registers JVM shutdown hook to ensure fs.umount()</span></span><br><span class="line">          <span class="comment">// will be executed when this process is exiting.</span></span><br><span class="line">          fuseFs.umount();</span><br><span class="line">        &#125;</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// Force direct_io in JNR-FUSE: writes and reads bypass the kernel page</span></span><br><span class="line">        <span class="comment">// cache and go directly to alluxio. This avoids extra memory copies</span></span><br><span class="line">        <span class="comment">// in the write path.</span></span><br><span class="line">        <span class="comment">// TODO(binfan): support kernel_cache (issues#10840)</span></span><br><span class="line">        fuseOpts.add(<span class="string">"-odirect_io"</span>);</span><br><span class="line">        <span class="keyword">final</span> AlluxioFuseFileSystem fuseFs = <span class="keyword">new</span> AlluxioFuseFileSystem(fs, opts, conf);</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">          fuseFs.mount(Paths.get(opts.getMountPoint()), <span class="keyword">true</span>, opts.isDebug(),</span><br><span class="line">              fuseOpts.toArray(<span class="keyword">new</span> String[<span class="number">0</span>]));</span><br><span class="line">        &#125; <span class="keyword">catch</span> (ru.serce.jnrfuse.FuseException e) &#123;</span><br><span class="line">          LOG.error(<span class="string">"Failed to mount &#123;&#125;"</span>, opts.getMountPoint(), e);</span><br><span class="line">          <span class="comment">// only try to umount file system when exception occurred.</span></span><br><span class="line">          <span class="comment">// jnr-fuse registers JVM shutdown hook to ensure fs.umount()</span></span><br><span class="line">          <span class="comment">// will be executed when this process is exiting.</span></span><br><span class="line">          fuseFs.umount();</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">      LOG.error(<span class="string">"Failed to mount Alluxio file system"</span>, e);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">AlluxioJniFuseFileSystem</span><br></pre></td></tr></table></figure>
+
+
+
+<p>alluxio.jnifuse.AbstractFuseFileSystem#mount</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">mount</span><span class="params">(<span class="keyword">boolean</span> blocking, <span class="keyword">boolean</span> debug, String[] fuseOpts)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">if</span> (!mounted.compareAndSet(<span class="keyword">false</span>, <span class="keyword">true</span>)) &#123;</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> FuseException(<span class="string">"Fuse File System already mounted!"</span>);</span><br><span class="line">  &#125;</span><br><span class="line">  LOG.info(<span class="string">"Mounting &#123;&#125;: blocking=&#123;&#125;, debug=&#123;&#125;, fuseOpts=\"&#123;&#125;\""</span>,</span><br><span class="line">      mountPoint, blocking, debug, Arrays.toString(fuseOpts));</span><br><span class="line">  String[] arg;</span><br><span class="line">  String mountPointStr = mountPoint.toString();</span><br><span class="line">  <span class="keyword">if</span> (mountPointStr.endsWith(<span class="string">"\\"</span>)) &#123;</span><br><span class="line">    mountPointStr = mountPointStr.substring(<span class="number">0</span>, mountPointStr.length() - <span class="number">1</span>);</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span> (!debug) &#123;</span><br><span class="line">    arg = <span class="keyword">new</span> String[] &#123;getFileSystemName(), <span class="string">"-f"</span>, mountPointStr&#125;;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    arg = <span class="keyword">new</span> String[] &#123;getFileSystemName(), <span class="string">"-f"</span>, <span class="string">"-d"</span>, mountPointStr&#125;;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">if</span> (fuseOpts.length != <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="keyword">int</span> argLen = arg.length;</span><br><span class="line">    arg = Arrays.copyOf(arg, argLen + fuseOpts.length);</span><br><span class="line">    System.arraycopy(fuseOpts, <span class="number">0</span>, arg, argLen, fuseOpts.length);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> String[] args = arg;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (SecurityUtils.canHandleShutdownHooks()) &#123;</span><br><span class="line">      Runtime.getRuntime().addShutdownHook(<span class="keyword">new</span> Thread(<span class="keyword">this</span>::umount));</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">int</span> res;</span><br><span class="line">    <span class="keyword">if</span> (blocking) &#123;</span><br><span class="line">      res = execMount(args);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        res = CompletableFuture.supplyAsync(() -&gt; execMount(args)).get(MOUNT_TIMEOUT_MS,</span><br><span class="line">            TimeUnit.MILLISECONDS);</span><br><span class="line">      &#125; <span class="keyword">catch</span> (TimeoutException e) &#123;</span><br><span class="line">        <span class="comment">// ok</span></span><br><span class="line">        res = <span class="number">0</span>;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (res != <span class="number">0</span>) &#123;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> FuseException(<span class="string">"Unable to mount FS, return code = "</span> + res);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">    mounted.set(<span class="keyword">false</span>);</span><br><span class="line">    <span class="keyword">throw</span> <span class="keyword">new</span> FuseException(<span class="string">"Unable to mount FS"</span>, e);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">private int execMount(String[] arg) &#123;</span><br><span class="line">  return libFuse.fuse_main_real(this, arg.length, arg);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>alluxio.jnifuse.LibFuse#fuse_main_real</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/JNI/" rel="tag"># JNI</a>
+              <a href="/tags/FUSE/" rel="tag"># FUSE</a>
+              <a href="/tags/JNI-FUSE/" rel="tag"># JNI-FUSE</a>
+              <a href="/tags/Java-Fuse/" rel="tag"># Java-Fuse</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/07/02/Prometheus%E5%AE%9E%E8%B7%B5/" rel="prev" title="Prometheus">
+      <i class="fa fa-chevron-left"></i> Prometheus
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/07/08/Alluxio%20JNI-FUSE/" rel="next" title="Alluxio JNI-FUSE">
+      Alluxio JNI-FUSE <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#"><span class="nav-number">1.</span> <span class="nav-text">JNI 简介</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#"><span class="nav-number">1.1.</span> <span class="nav-text">链接方式</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.1.1.</span> <span class="nav-text">让 Java 虚拟机自动查找符合默认命名规范的 C 函数，并且链接起来</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.1.2.</span> <span class="nav-text">在 C 代码中主动链接</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#"><span class="nav-number">1.2.</span> <span class="nav-text">本地实现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#"><span class="nav-number">1.3.</span> <span class="nav-text">Java JNI调用示例</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#"><span class="nav-number">1.4.</span> <span class="nav-text">C调用Java</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#"><span class="nav-number">2.</span> <span class="nav-text">JNI-FUSE</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#"><span class="nav-number">2.1.</span> <span class="nav-text">从mount挂在说起</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#"><span class="nav-number">2.2.</span> <span class="nav-text">文件系统</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#"><span class="nav-number">2.3.</span> <span class="nav-text">FUSE</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">2.3.1.</span> <span class="nav-text">请求</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">2.3.2.</span> <span class="nav-text">响应</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">2.3.3.</span> <span class="nav-text">&#x2F;dev&#x2F;fuse</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">2.3.4.</span> <span class="nav-text">使用</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#"><span class="nav-number">2.4.</span> <span class="nav-text">Java开发Fuse文件系统</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#"><span class="nav-number">3.</span> <span class="nav-text">Alluxio JNI Fuse</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">李宁</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">39</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">71</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">李宁</span>
+</div>
+  <div class="powered-by">万物之始，大道至简
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">知易行难，悟在天成
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

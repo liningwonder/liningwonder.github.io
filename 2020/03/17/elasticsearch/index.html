@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"localhost","root":"/","scheme":"Muse","version":"7.7.2","exturl":false,"sidebar":{"position":"left","display":"hide","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="ElasticSearch知识库     ElasticSearch知识库创建索引   1curl -X PUT &quot;http:&#x2F;&#x2F;localhost:9200&#x2F;company?include_type_name&#x3D;true&quot; -H &quot;Content-Type: application&#x2F;json&quot; -d &#39;&amp;#123;&quot;mappings&quot;:&amp;#123;&quot;_doc&quot;:&amp;#123;&quot;properti">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ElasticSearch知识库">
+<meta property="og:url" content="http://localhost:4000/2020/03/17/elasticsearch/index.html">
+<meta property="og:site_name" content="李宁的博客">
+<meta property="og:description" content="ElasticSearch知识库     ElasticSearch知识库创建索引   1curl -X PUT &quot;http:&#x2F;&#x2F;localhost:9200&#x2F;company?include_type_name&#x3D;true&quot; -H &quot;Content-Type: application&#x2F;json&quot; -d &#39;&amp;#123;&quot;mappings&quot;:&amp;#123;&quot;_doc&quot;:&amp;#123;&quot;properti">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-03-16T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-01-17T01:38:39.068Z">
+<meta property="article:author" content="李宁">
+<meta property="article:tag" content="ElasticSearch">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://localhost:4000/2020/03/17/elasticsearch/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true
+  };
+</script>
+
+  <title>ElasticSearch知识库 | 李宁的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">李宁的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://localhost:4000/2020/03/17/elasticsearch/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="李宁">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="李宁的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          ElasticSearch知识库
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-03-17 00:00:00" itemprop="dateCreated datePublished" datetime="2020-03-17T00:00:00+08:00">2020-03-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-01-17 09:38:39" itemprop="dateModified" datetime="2022-01-17T09:38:39+08:00">2022-01-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ElasticSearch/" itemprop="url" rel="index"><span itemprop="name">ElasticSearch</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <!-- toc -->
+
+<ul>
+<li><a href="#elasticsearch知识库">ElasticSearch知识库</a></li>
+</ul>
+<!-- tocstop -->
+
+<hr>
+<h2><span id="elasticsearch知识库">ElasticSearch知识库</span></h2><p>创建索引  </p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -X PUT <span class="string">"http://localhost:9200/company?include_type_name=true"</span> -H <span class="string">"Content-Type: application/json"</span> -d <span class="string">'&#123;"mappings":&#123;"_doc":&#123;"properties":&#123;"companyId":&#123;"type":"text","fields":&#123;"keyword":&#123;"type":"keyword","ignore_above":256&#125;&#125;&#125;,"entName":&#123;"type":"text","analyzer":"ik_max_word"&#125;,"entTypeId":&#123;"type":"integer"&#125;,"estDate":&#123;"type":"date"&#125;,"historyName":&#123;"type":"text","analyzer":"ik_max_word"&#125;,"industryId":&#123;"type":"keyword"&#125;,"keyPerson":&#123;"type":"keyword"&#125;,"provinceId":&#123;"type":"integer"&#125;,"regCap":&#123;"type":"double"&#125;,"regNo":&#123;"type":"keyword"&#125;,"uniscId":&#123;"type":"keyword"&#125;&#125;&#125;&#125;&#125;'</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">DELETE company</span><br><span class="line">GET company/_search</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">curl <span class="string">"http://127.0.0.1:9200/company/_mapping"</span></span><br><span class="line">curl <span class="string">"http://127.0.0.1:9200/company/_search"</span></span><br><span class="line">curl -X DELETE <span class="string">"http://127.0.0.1:9200/company"</span></span><br><span class="line">curl -XGET <span class="string">"http://127.0.0.1:9200/company/_doc/_search"</span> -H <span class="string">'Content-Type: application/json'</span> -d<span class="string">'&#123;"query" : &#123;  "multi_match" : &#123;    "query" : "上海银行股份有限公司",    "fields" : ["entName","historyName"]  &#125;  &#125;&#125;'</span></span><br></pre></td></tr></table></figure>
+
+<p>安装ik分词器</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./elasticsearch-plugin install https://github.com/medcl/elasticsearch-analysis-ik/releases/download/v7.4.2/elasticsearch-analysis-ik-7.4.2.zip</span><br></pre></td></tr></table></figure>
+
+
+<p>查询</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Service</span>(<span class="string">"elasticService"</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ElasticServiceImpl</span> <span class="keyword">implements</span> <span class="title">ElasticService</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> ESCompanyInfoRepository esCompanyInfoRepository;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> List&lt;ESCompanyInfo&gt; <span class="title">findByContent</span><span class="params">(String content)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 这里不需要分页，需要查询所有的。</span></span><br><span class="line">        <span class="comment">// 但是考虑性能问题，暂时设置为10000条</span></span><br><span class="line">        <span class="comment">// 是否需要遍历所有的数据？</span></span><br><span class="line">        QueryBuilder q = QueryBuilders.multiMatchQuery(content,<span class="string">"entName"</span>, <span class="string">"historyName"</span>, <span class="string">"unsicId"</span>, <span class="string">"regNo"</span>, <span class="string">"name"</span>);</span><br><span class="line">        NativeSearchQueryBuilder queryBuilder = <span class="keyword">new</span> NativeSearchQueryBuilder();</span><br><span class="line">        queryBuilder.withQuery(q);</span><br><span class="line">        queryBuilder.withPageable(PageRequest.of(<span class="number">0</span>, <span class="number">10000</span>));</span><br><span class="line">        Page&lt;ESCompanyInfo&gt; page = esCompanyInfoRepository.search(queryBuilder.build());</span><br><span class="line">        <span class="keyword">return</span> page.getContent();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> List&lt;ESCompanyInfo&gt; <span class="title">findByContent</span><span class="params">(String content, <span class="keyword">int</span> type)</span> </span>&#123;</span><br><span class="line">        QueryBuilder q;</span><br><span class="line">        <span class="keyword">switch</span> (type) &#123;</span><br><span class="line">            <span class="keyword">case</span> <span class="number">1</span> :</span><br><span class="line">                q =  QueryBuilders.matchQuery(content, <span class="string">"unsicId"</span>);</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> <span class="number">2</span> :</span><br><span class="line">                q =  QueryBuilders.matchQuery(content, <span class="string">"regNo"</span>);</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> <span class="number">3</span> :</span><br><span class="line">                q =  QueryBuilders.matchQuery(content, <span class="string">"name"</span>);</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">default</span>:</span><br><span class="line">                q =  QueryBuilders.multiMatchQuery(content,<span class="string">"entName"</span>, <span class="string">"historyName"</span>);</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        NativeSearchQueryBuilder queryBuilder = <span class="keyword">new</span> NativeSearchQueryBuilder();</span><br><span class="line">        queryBuilder.withQuery(q);</span><br><span class="line">        queryBuilder.withPageable(PageRequest.of(<span class="number">0</span>, <span class="number">10000</span>));</span><br><span class="line">        Page&lt;ESCompanyInfo&gt; page = esCompanyInfoRepository.search(queryBuilder.build());</span><br><span class="line">        <span class="keyword">return</span> page.getContent();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Page&lt;ESCompanyInfo&gt; <span class="title">findByContent</span><span class="params">(FilterBean filterBean)</span> </span>&#123;</span><br><span class="line">        List&lt;QueryBuilder&gt; allQueryBuilder = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">        QueryBuilder contentQuery;</span><br><span class="line">        <span class="keyword">switch</span> (filterBean.getContentType()) &#123;</span><br><span class="line">            <span class="keyword">case</span> <span class="number">1</span> :</span><br><span class="line">                contentQuery =  QueryBuilders.termQuery(<span class="string">"uniscId"</span>, filterBean.getContent());</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> <span class="number">2</span> :</span><br><span class="line">                contentQuery =  QueryBuilders.termQuery(<span class="string">"regNo"</span>, filterBean.getContent());</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">case</span> <span class="number">3</span> :</span><br><span class="line">                contentQuery =  QueryBuilders.termsQuery(<span class="string">"keyPerson"</span>, filterBean.getContent());</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">default</span>:</span><br><span class="line">                contentQuery =  QueryBuilders.matchQuery(<span class="string">"entName"</span>, filterBean.getContent()).analyzer(<span class="string">"ik_max_word"</span>).minimumShouldMatch(<span class="string">"100%"</span>);;</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        allQueryBuilder.add(contentQuery);</span><br><span class="line">        QueryBuilder estDateQuery;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> != filterBean.getEstYearsMin()) &#123;</span><br><span class="line">            <span class="keyword">int</span> min = -Math.abs(filterBean.getEstYearsMin());</span><br><span class="line">            Date minDate = getTargetDate(min);</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> != filterBean.getEstYearsMax()) &#123;</span><br><span class="line">                <span class="keyword">int</span> max = -Math.abs(filterBean.getEstYearsMax());</span><br><span class="line">                Date maxDate = getTargetDate(max);</span><br><span class="line">                estDateQuery = QueryBuilders.rangeQuery(<span class="string">"estDate"</span>).from(maxDate.getTime()).to(minDate.getTime());</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                estDateQuery = QueryBuilders.rangeQuery(<span class="string">"estDate"</span>).lte(minDate.getTime());</span><br><span class="line">            &#125;</span><br><span class="line">            allQueryBuilder.add(estDateQuery);</span><br><span class="line">        &#125;</span><br><span class="line">        QueryBuilder regCapQuery;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> != filterBean.getRegCapMin() || <span class="keyword">null</span> != filterBean.getRegCapMax()) &#123;</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> != filterBean.getRegCapMax()) &#123;</span><br><span class="line">                regCapQuery = QueryBuilders.rangeQuery(<span class="string">"regCap"</span>).from(filterBean.getRegCapMin().doubleValue()).to(filterBean.getRegCapMax().doubleValue());</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                regCapQuery = QueryBuilders.rangeQuery(<span class="string">"regCap"</span>).gte(filterBean.getRegCapMin().doubleValue());</span><br><span class="line">            &#125;</span><br><span class="line">            allQueryBuilder.add(regCapQuery);</span><br><span class="line">        &#125;</span><br><span class="line">        QueryBuilder industryQuery;</span><br><span class="line">        <span class="keyword">if</span> (StringUtils.isNotBlank(filterBean.getIndustryId())) &#123;</span><br><span class="line">            industryQuery = QueryBuilders.termQuery(<span class="string">"industryId"</span>, filterBean.getIndustryId());</span><br><span class="line">            allQueryBuilder.add(industryQuery);</span><br><span class="line">        &#125;</span><br><span class="line">        QueryBuilder provinceQuery;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> != filterBean.getProvinceId()) &#123;</span><br><span class="line">            provinceQuery = QueryBuilders.termQuery(<span class="string">"provinceId"</span>, filterBean.getProvinceId());</span><br><span class="line">            allQueryBuilder.add(provinceQuery);</span><br><span class="line">        &#125;</span><br><span class="line">        QueryBuilder entTypeQuery;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> != filterBean.getEntTypeId()) &#123;</span><br><span class="line">            <span class="keyword">if</span> (<span class="number">1000</span> == filterBean.getEntTypeId()) &#123;</span><br><span class="line">                entTypeQuery = QueryBuilders.rangeQuery(<span class="string">"entTypeId"</span>).from(<span class="number">1000</span>, <span class="keyword">true</span>).to(<span class="number">5000</span>, <span class="keyword">false</span>);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                entTypeQuery = QueryBuilders.rangeQuery(<span class="string">"entTypeId"</span>).from(filterBean.getEntTypeId(), <span class="keyword">true</span>).to(filterBean.getEntTypeId() + <span class="number">1000</span>, <span class="keyword">false</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            allQueryBuilder.add(entTypeQuery);</span><br><span class="line">        &#125;</span><br><span class="line">        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();</span><br><span class="line">        <span class="keyword">for</span> (QueryBuilder queryBuilder : allQueryBuilder) &#123;</span><br><span class="line">            boolQueryBuilder.must(queryBuilder);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//SortBuilder sortBuilder = SortBuilders.fieldSort("regCap").order(SortOrder.DESC);</span></span><br><span class="line">        NativeSearchQueryBuilder queryBuilder = <span class="keyword">new</span> NativeSearchQueryBuilder();</span><br><span class="line">        queryBuilder.withQuery(boolQueryBuilder);</span><br><span class="line">        <span class="comment">//前端传的pageNum初始为1</span></span><br><span class="line">        queryBuilder.withPageable(PageRequest.of(filterBean.getPageNum() - <span class="number">1</span>, filterBean.getPageSize()));</span><br><span class="line">        <span class="comment">//queryBuilder.withSort(sortBuilder);</span></span><br><span class="line">        <span class="keyword">return</span> esCompanyInfoRepository.search(queryBuilder.build());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Page&lt;ESCompanyInfo&gt; <span class="title">searchByContent</span><span class="params">(Integer pageNumber, Integer pageSize, String content)</span> </span>&#123;</span><br><span class="line">        QueryBuilder q = QueryBuilders.multiMatchQuery(content,<span class="string">"entName"</span>, <span class="string">"historyName"</span>, <span class="string">"companyId"</span>, <span class="string">"regNo"</span>, <span class="string">"keyPerson"</span>);</span><br><span class="line">        NativeSearchQueryBuilder queryBuilder = <span class="keyword">new</span> NativeSearchQueryBuilder();</span><br><span class="line">        queryBuilder.withQuery(q);</span><br><span class="line">        queryBuilder.withPageable(PageRequest.of(pageNumber, pageSize));</span><br><span class="line">        <span class="keyword">return</span> esCompanyInfoRepository.search(queryBuilder.build());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> Date <span class="title">getTargetDate</span><span class="params">(<span class="keyword">int</span> a)</span> </span>&#123;</span><br><span class="line">        Calendar c = Calendar.getInstance();</span><br><span class="line">        c.setTime(<span class="keyword">new</span> Date());</span><br><span class="line">        c.add(Calendar.YEAR, a);</span><br><span class="line">        <span class="keyword">return</span> c.getTime();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/ElasticSearch/" rel="tag"># ElasticSearch</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/03/17/linux/" rel="prev" title="Linux知识库">
+      <i class="fa fa-chevron-left"></i> Linux知识库
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/03/17/CentOS/" rel="next" title="CentOS">
+      CentOS <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#"><span class="nav-number">1.</span> <span class="nav-text">ElasticSearch知识库</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">李宁</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">39</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">71</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">李宁</span>
+</div>
+  <div class="powered-by">万物之始，大道至简
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">知易行难，悟在天成
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

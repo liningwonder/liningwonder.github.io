@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"localhost","root":"/","scheme":"Muse","version":"7.7.2","exturl":false,"sidebar":{"position":"left","display":"hide","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Fat JAR 应用启动脚本 ELK启动脚本 Flnik任务提交脚本 Thin Jar 应用启动脚本     Fat JAR 应用启动脚本12345678910111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364656667686">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java应用启动脚本">
+<meta property="og:url" content="http://localhost:4000/2020/06/29/Java%E5%BA%94%E7%94%A8%E5%90%AF%E5%8A%A8%E8%84%9A%E6%9C%AC/index.html">
+<meta property="og:site_name" content="李宁的博客">
+<meta property="og:description" content="Fat JAR 应用启动脚本 ELK启动脚本 Flnik任务提交脚本 Thin Jar 应用启动脚本     Fat JAR 应用启动脚本12345678910111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364656667686">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-06-28T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-01-17T01:38:39.066Z">
+<meta property="article:author" content="李宁">
+<meta property="article:tag" content="Java">
+<meta property="article:tag" content="Script">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://localhost:4000/2020/06/29/Java%E5%BA%94%E7%94%A8%E5%90%AF%E5%8A%A8%E8%84%9A%E6%9C%AC/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true
+  };
+</script>
+
+  <title>Java应用启动脚本 | 李宁的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">李宁的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://localhost:4000/2020/06/29/Java%E5%BA%94%E7%94%A8%E5%90%AF%E5%8A%A8%E8%84%9A%E6%9C%AC/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="李宁">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="李宁的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Java应用启动脚本
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-06-29 00:00:00" itemprop="dateCreated datePublished" datetime="2020-06-29T00:00:00+08:00">2020-06-29</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-01-17 09:38:39" itemprop="dateModified" datetime="2022-01-17T09:38:39+08:00">2022-01-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Java%E5%BA%94%E7%94%A8%E5%90%AF%E5%8A%A8%E8%84%9A%E6%9C%AC/" itemprop="url" rel="index"><span itemprop="name">Java应用启动脚本</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <!-- toc -->
+
+<ul>
+<li><a href="#fat-jar-应用启动脚本">Fat JAR 应用启动脚本</a></li>
+<li><a href="#elk启动脚本">ELK启动脚本</a></li>
+<li><a href="#flnik任务提交脚本">Flnik任务提交脚本</a></li>
+<li><a href="#thin-jar-应用启动脚本">Thin Jar 应用启动脚本</a></li>
+</ul>
+<!-- tocstop -->
+
+<hr>
+<h4><span id="fat-jar-应用启动脚本">Fat JAR 应用启动脚本</span></h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">!/bin/bash</span></span><br><span class="line"></span><br><span class="line">APP_HOME_PATH=$(cd `dirname $0`; pwd)</span><br><span class="line">cd $APP_HOME_PATH</span><br><span class="line"></span><br><span class="line">APP_CONF=$APP_HOME_PATH/application.properties</span><br><span class="line">LOG4J_CONFIG_FILE=$APP_HOME_PATH/log4j2.xml</span><br><span class="line"></span><br><span class="line">if [ ! -d $APP_HOME_PATH/logs ] ; then</span><br><span class="line">	mkdir -p $APP_HOME_PATH/logs</span><br><span class="line">fi</span><br><span class="line"></span><br><span class="line">APP_NAME=$2</span><br><span class="line"></span><br><span class="line">if [ "$1" = "" ];</span><br><span class="line">then</span><br><span class="line">    echo -e "\033[0;31m please input \033[0m  \033[0;34m &#123;start|stop|restart|status&#125; \033[0m"</span><br><span class="line">    exit 1</span><br><span class="line">fi</span><br><span class="line"></span><br><span class="line">if [ "$APP_NAME" = "" ];</span><br><span class="line">then</span><br><span class="line">    echo -e "\033[0;31m please input app jar name \033[0m"</span><br><span class="line">    exit 1</span><br><span class="line">fi</span><br><span class="line"></span><br><span class="line">function start()</span><br><span class="line">&#123;</span><br><span class="line">	JAVA_OPTS="-server -Xms2048m -Xmx2048m"</span><br><span class="line">	JAVA_OPTS="$JAVA_OPTS -XX:+HeapDumpOnOutOfMemoryError"</span><br><span class="line">	JAVA_OPTS="$JAVA_OPTS -Djava.awt.headless=true -Djava.net.preferIPv4Stack=true -Dfile.encoding=UTF-8"</span><br><span class="line">	count=`ps -ef |grep java|grep $APP_NAME|grep -v grep|wc -l`</span><br><span class="line">	if [ $count != 0 ];then</span><br><span class="line">		echo "$APP_NAME is running..."</span><br><span class="line">	else</span><br><span class="line">		echo "Start $APP_NAME success..."</span><br><span class="line">		nohup java $JAVA_OPTS -jar $APP_NAME -Dspring.config.location=$APP_CONF -Dlog4j.configurationFile=$LOG4J_CONFIG_FILE &gt; /dev/null 2&gt;&amp;1 &amp;</span><br><span class="line">	fi</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">function stop()</span><br><span class="line">&#123;</span><br><span class="line">	echo "Stop $APP_NAME"</span><br><span class="line">	boot_id=`ps -ef |grep java|grep $APP_NAME|grep -v grep|awk '&#123;print $2&#125;'`</span><br><span class="line">	count=`ps -ef |grep java|grep $APP_NAME|grep -v grep|wc -l`</span><br><span class="line"></span><br><span class="line">	if [ $count != 0 ];then</span><br><span class="line">	    kill $boot_id</span><br><span class="line">    	count=`ps -ef |grep java|grep $APP_NAME|grep -v grep|wc -l`</span><br><span class="line"></span><br><span class="line">		boot_id=`ps -ef |grep java|grep $APP_NAME|grep -v grep|awk '&#123;print $2&#125;'`</span><br><span class="line">		kill -9 $boot_id</span><br><span class="line">	fi</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">function restart()</span><br><span class="line">&#123;</span><br><span class="line">	stop</span><br><span class="line">	sleep 2</span><br><span class="line">	start</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">function status()</span><br><span class="line">&#123;</span><br><span class="line">    count=`ps -ef |grep java|grep $APP_NAME|grep -v grep|wc -l`</span><br><span class="line">    if [ $count != 0 ];then</span><br><span class="line">        echo "$APP_NAME is running..."</span><br><span class="line">    else</span><br><span class="line">        echo "$APP_NAME is not running..."</span><br><span class="line">    fi</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">case $1 in</span><br><span class="line">	start)</span><br><span class="line">	start;;</span><br><span class="line">	stop)</span><br><span class="line">	stop;;</span><br><span class="line">	restart)</span><br><span class="line">	restart;;</span><br><span class="line">	status)</span><br><span class="line">	status;;</span><br><span class="line">	*)</span><br><span class="line"></span><br><span class="line">	echo -e "\033[0;31m Usage: \033[0m  \033[0;34m sh  $0  &#123;start|stop|restart|status&#125;  &#123;SpringBootJarName&#125; \033[0m</span><br><span class="line">\033[0;31m Example: \033[0m</span><br><span class="line">	  \033[0;33m sh  $0  start esmart-test.jar \033[0m"</span><br><span class="line">esac</span><br></pre></td></tr></table></figure>
+
+
+
+<h4><span id="elk启动脚本">ELK启动脚本</span></h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">!/bin/bash</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash">---------------------------------------------------</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> Licensed to the China UnionPay License (UPL)</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> lining@unionpaysmart.com</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> All rights reversed</span></span><br><span class="line"><span class="meta">#</span><span class="bash">---------------------------------------------------</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> shellcheck <span class="built_in">disable</span>=SC2046</span></span><br><span class="line">APP_HOME_PATH=$(cd `dirname $0`; pwd)</span><br><span class="line">cd $APP_HOME_PATH</span><br><span class="line">export JAVA_HOME=/APONLAS/elk/jdk1.8.0_221</span><br><span class="line">nohup ./elasticsearch &gt;&gt; start_elk.log 2&gt;&amp;1 &amp;</span><br></pre></td></tr></table></figure>
+
+
+
+<h4><span id="flnik任务提交脚本">Flnik任务提交脚本</span></h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">!/bin/bash</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash"> shellcheck <span class="built_in">disable</span>=SC2046</span></span><br><span class="line">APP_HOME_PATH=$(cd `dirname $0`; pwd)</span><br><span class="line">cd $APP_HOME_PATH</span><br><span class="line"></span><br><span class="line">FLINK_HOME=/data/flink-1.10.1</span><br><span class="line">APP_JAR_HOME=/data/test/data-etl-1.0.0-id.jar</span><br><span class="line"></span><br><span class="line">JDBC_URL=jdbc:mysql://x.x.x.42:54120/apbizdbh1?useUnicode=true</span><br><span class="line">USER_NAME=xxx</span><br><span class="line">PASSWORD=xxx@xxx</span><br><span class="line"></span><br><span class="line">ES_HOSTS=x.x.x.21,x.x.x.23,x.x.x.24</span><br><span class="line"></span><br><span class="line">MAX_ACTIONS=1000</span><br><span class="line">MAX_SIZE=5</span><br><span class="line">FLUSH_INTERVAL=1000</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">TABLE_NAME_PREFIX="tbl_apbiz_usr_trans_inf"</span><br><span class="line"></span><br><span class="line">for ((i=1; i&lt;=9; i ++))</span><br><span class="line">do</span><br><span class="line">  ALL_TABLE[i]="$&#123;TABLE_NAME_PREFIX&#125;0$&#123;i&#125;"</span><br><span class="line">done</span><br><span class="line"></span><br><span class="line">for ((i=10; i&lt;=31; i ++))</span><br><span class="line">do</span><br><span class="line">  ALL_TABLE[i]="$&#123;TABLE_NAME_PREFIX&#125;$&#123;i&#125;"</span><br><span class="line">done</span><br><span class="line"></span><br><span class="line">for ((i=1; i&lt;=31; i ++))</span><br><span class="line">do</span><br><span class="line">JOB_LOG=job-$&#123;ALL_TABLE[i]&#125;-2020.log</span><br><span class="line"><span class="meta">$</span><span class="bash">&#123;FLINK_HOME&#125;/bin/flink run <span class="variable">$&#123;APP_JAR_HOME&#125;</span> --dbUrl <span class="variable">$&#123;JDBC_URL&#125;</span> --userName <span class="variable">$&#123;USER_NAME&#125;</span> --passWord <span class="variable">$&#123;PASSWORD&#125;</span> --tableName <span class="variable">$&#123;ALL_TABLE[i]&#125;</span> --esHosts <span class="variable">$&#123;ES_HOSTS&#125;</span> --index up_trans --numMaxActions <span class="variable">$&#123;MAX_ACTIONS&#125;</span> --maxSizeMb <span class="variable">$&#123;MAX_SIZE&#125;</span> --intervalMillis <span class="variable">$&#123;FLUSH_INTERVAL&#125;</span> &gt;&gt; <span class="variable">$&#123;JOB_LOG&#125;</span> 2&gt;&amp;1</span></span><br><span class="line">done</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h4><span id="thin-jar-应用启动脚本">Thin Jar 应用启动脚本</span></h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">!/bin/bash</span></span><br><span class="line">current_path=`pwd`</span><br><span class="line">bin_abs_path=$(readlink -f $(dirname $0))</span><br><span class="line">base=$&#123;bin_abs_path&#125;/..</span><br><span class="line"></span><br><span class="line">LOG4J_CONFIG_FILE= $base/conf/log4j.xml</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">if [ -f $base/bin/app.pid ] ; then</span><br><span class="line">	echo "found app.pid , Please run stop.sh first ,then startup.sh" 2&gt;&amp;2</span><br><span class="line">  exit 1</span><br><span class="line">fi</span><br><span class="line"></span><br><span class="line">if [ ! -d $base/logs ] ; then</span><br><span class="line">	mkdir -p $base/logs</span><br><span class="line">fi</span><br><span class="line"></span><br><span class="line">START_LOG=$base/logs/start.log</span><br><span class="line"></span><br><span class="line">if [ ! -f $START_LOG ] ; then</span><br><span class="line">	echo "" &gt; $START_LOG</span><br><span class="line">fi</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">JAVA_HOME=/usr/jdk1.8.0_221</span><br><span class="line">JAVA=$JAVA_HOME/bin/java</span><br><span class="line">JAVA_OPTS="-server -Xms2048m -Xmx2048m"</span><br><span class="line">JAVA_OPTS="$JAVA_OPTS -XX:+HeapDumpOnOutOfMemoryError"</span><br><span class="line">JAVA_OPTS="$JAVA_OPTS -XX:+UseG1GC -XX:MaxGCPauseMillis=250 -XX:+UseGCOverheadLimit -XX:+ExplicitGCInvokesConcurrent -XX:+PrintAdaptiveSizePolicy -XX:+PrintTenuringDistribution"</span><br><span class="line">JAVA_OPTS="$JAVA_OPTS -Djava.awt.headless=true -Djava.net.preferIPv4Stack=true -Dfile.encoding=UTF-8 -Dlog4j.configurationFile=$&#123;LOG4J_CONFIG_FILE&#125;"</span><br><span class="line"></span><br><span class="line">for i in $base/lib/*;</span><br><span class="line">    do CLASSPATH=$i:"$CLASSPATH";</span><br><span class="line">done</span><br><span class="line"></span><br><span class="line">CLASSPATH="$base/conf:$CLASSPATH";</span><br><span class="line"></span><br><span class="line">cd $bin_abs_path</span><br><span class="line"></span><br><span class="line"><span class="meta">$</span><span class="bash">JAVA <span class="variable">$JAVA_OPTS</span> -classpath .:<span class="variable">$CLASSPATH</span> com.datafusion.maven.assembly.Main &gt;&gt;<span class="variable">$START_LOG</span> 2&gt;&amp;1 &amp;</span></span><br><span class="line"></span><br><span class="line">echo $! &gt; $base/bin/admin.pid</span><br><span class="line"></span><br><span class="line">cd $current_path</span><br></pre></td></tr></table></figure>
+
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Java/" rel="tag"># Java</a>
+              <a href="/tags/Script/" rel="tag"># Script</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/06/28/redis/" rel="prev" title="Redis知识库">
+      <i class="fa fa-chevron-left"></i> Redis知识库
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/07/08/Alluxio%E5%85%A5%E9%97%A8/" rel="next" title="Alluxio入门">
+      Alluxio入门 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.</span> <span class="nav-text">Fat JAR 应用启动脚本</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">2.</span> <span class="nav-text">ELK启动脚本</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">3.</span> <span class="nav-text">Flnik任务提交脚本</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">4.</span> <span class="nav-text">Thin Jar 应用启动脚本</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">李宁</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">39</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">71</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">李宁</span>
+</div>
+  <div class="powered-by">万物之始，大道至简
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">知易行难，悟在天成
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

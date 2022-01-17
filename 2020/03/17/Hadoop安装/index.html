@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"localhost","root":"/","scheme":"Muse","version":"7.7.2","exturl":false,"sidebar":{"position":"left","display":"hide","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Hadoop安装 Single Node Cluster   Pseudo-Distributed Operation 伪分布式模式 YARN on a Single Node   Hadoop Cluster Setup       Hadoop安装准备虚拟机环境 123456789101112131415161718192021222324252627282930313233343536">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hadoop源码编译">
+<meta property="og:url" content="http://localhost:4000/2020/03/17/Hadoop%E5%AE%89%E8%A3%85/index.html">
+<meta property="og:site_name" content="李宁的博客">
+<meta property="og:description" content="Hadoop安装 Single Node Cluster   Pseudo-Distributed Operation 伪分布式模式 YARN on a Single Node   Hadoop Cluster Setup       Hadoop安装准备虚拟机环境 123456789101112131415161718192021222324252627282930313233343536">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-03-16T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-01-17T01:38:39.065Z">
+<meta property="article:author" content="李宁">
+<meta property="article:tag" content="Hadoop">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://localhost:4000/2020/03/17/Hadoop%E5%AE%89%E8%A3%85/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true
+  };
+</script>
+
+  <title>Hadoop源码编译 | 李宁的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">李宁的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://localhost:4000/2020/03/17/Hadoop%E5%AE%89%E8%A3%85/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="李宁">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="李宁的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Hadoop源码编译
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-03-17 00:00:00" itemprop="dateCreated datePublished" datetime="2020-03-17T00:00:00+08:00">2020-03-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-01-17 09:38:39" itemprop="dateModified" datetime="2022-01-17T09:38:39+08:00">2022-01-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Hadoop/" itemprop="url" rel="index"><span itemprop="name">Hadoop</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <!-- toc -->
+
+<ul>
+<li><a href="#hadoop安装">Hadoop安装</a><ul>
+<li><a href="#single-node-cluster">Single Node Cluster</a></li>
+</ul>
+</li>
+<li><a href="#pseudo-distributed-operation-伪分布式模式">Pseudo-Distributed Operation 伪分布式模式</a><ul>
+<li><a href="#yarn-on-a-single-node">YARN on a Single Node</a></li>
+</ul>
+<ul>
+<li><a href="#hadoop-cluster-setup">Hadoop Cluster Setup</a></li>
+</ul>
+</li>
+</ul>
+<!-- tocstop -->
+
+<hr>
+<h2><span id="hadoop安装">Hadoop安装</span></h2><p>准备虚拟机环境</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">#设置IP地址</span></span><br><span class="line"><span class="built_in">cd</span> /etc/sysconfig/network-scripts</span><br><span class="line">vi ifcfg-ens33</span><br><span class="line"></span><br><span class="line">TYPE=<span class="string">"Ethernet"</span></span><br><span class="line">PROXY_METHOD=<span class="string">"none"</span></span><br><span class="line">BROWSER_ONLY=<span class="string">"no"</span></span><br><span class="line">BOOTPROTO=<span class="string">"static"</span></span><br><span class="line">DEFROUTE=<span class="string">"yes"</span></span><br><span class="line">IPV4_FAILURE_FATAL=<span class="string">"no"</span></span><br><span class="line">IPV6INIT=<span class="string">"yes"</span></span><br><span class="line">IPV6_AUTOCONF=<span class="string">"yes"</span></span><br><span class="line">IPV6_DEFROUTE=<span class="string">"yes"</span></span><br><span class="line">IPV6_FAILURE_FATAL=<span class="string">"no"</span></span><br><span class="line">IPV6_ADDR_GEN_MODE=<span class="string">"stable-privacy"</span></span><br><span class="line">NAME=<span class="string">"ens33"</span></span><br><span class="line">UUID=<span class="string">"1b6cb313-debd-43ee-be56-e925bbb5b1b2"</span></span><br><span class="line">DEVICE=<span class="string">"ens33"</span></span><br><span class="line">ONBOOT=<span class="string">"yes"</span></span><br><span class="line">IPADDR=<span class="string">"192.168.67.21"</span></span><br><span class="line">PREFIX=<span class="string">"24"</span></span><br><span class="line">GATEWAY=<span class="string">"192.168.67.2"</span></span><br><span class="line">IPV6_PRIVACY=<span class="string">"no"</span></span><br><span class="line">DNS1=<span class="string">"114.114.114.114"</span></span><br><span class="line"></span><br><span class="line">systemctl restart network</span><br><span class="line"></span><br><span class="line">systemctl status network</span><br><span class="line"></span><br><span class="line"><span class="comment">#设置域名</span></span><br><span class="line">hostnamectl --static <span class="built_in">set</span>-hostname hadoop</span><br><span class="line">hostname -f</span><br><span class="line"></span><br><span class="line">vi /etc/hosts</span><br><span class="line">192.168.67.21 hadoop</span><br><span class="line"></span><br><span class="line"><span class="comment">#关闭防火墙</span></span><br><span class="line">systemctl stop firewalld.service</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">#关闭SELinux</span></span><br><span class="line">setenforce 0</span><br><span class="line">vi /etc/selinux/config</span><br><span class="line">SELINUX=disabled</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">yum install -y wget</span><br><span class="line">mv /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo_bak</span><br><span class="line">wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo</span><br><span class="line">wget https://mirrors.aliyun.com/repo/epel-7.repo</span><br><span class="line"></span><br><span class="line">yum clan all</span><br><span class="line">yum makecache</span><br><span class="line">yum repolist</span><br></pre></td></tr></table></figure>
+
+<p>软件安装</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">#JDK </span></span><br><span class="line"><span class="built_in">cd</span> /opt</span><br><span class="line">tar -zxvf jdk-8u221-linux-x64.tar.gz</span><br><span class="line"></span><br><span class="line"><span class="comment">#JCE</span></span><br><span class="line">unzip jce_policy-8.zip</span><br><span class="line">cp /opt/UnlimitedJCEPolicyJDK8/local_policy.jar /opt/jdk1.8.0_221/jre/lib/security</span><br><span class="line">cp /opt/UnlimitedJCEPolicyJDK8/US_export_policy.jar /opt/jdk1.8.0_221/jre/lib/security</span><br><span class="line"></span><br><span class="line"><span class="comment">#或者</span></span><br><span class="line">unzip -oj -d /opt/jdk1.8.0_221/jre/lib/security/ /opt/jce_policy-8.zip</span><br><span class="line"></span><br><span class="line"><span class="comment">#1.5以上的JDK不用设置CLASS_PATH</span></span><br><span class="line"><span class="comment">#如果要设置，则export CLASS_PATH=.:$JAVA_HOME/lib/:$CLASS_PATH</span></span><br><span class="line">vi /etc/profile</span><br><span class="line"><span class="built_in">export</span> JAVA_HOME=/opt/jdk1.8.0_221</span><br><span class="line"><span class="built_in">export</span> PATH=<span class="variable">$PATH</span>:<span class="variable">$JAVA_HOME</span>/bin</span><br><span class="line"></span><br><span class="line"><span class="built_in">source</span> /etc/profile</span><br><span class="line"></span><br><span class="line">java -version</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">#本机免密</span></span><br><span class="line">ssh-keygen -t rsa</span><br><span class="line"></span><br><span class="line">ssh-copy-id -i /root/.ssh/id_rsa.pub root@192.168.67.21</span><br><span class="line"></span><br><span class="line">或者</span><br><span class="line">cat /root/.ssh/id_rsa.pub &gt;&gt; /root/.ssh/authorized_keys</span><br><span class="line"></span><br><span class="line">测试</span><br><span class="line">ssh localhost</span><br></pre></td></tr></table></figure>
+
+<h1><span id="single-node-cluster">Single Node Cluster</span></h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">cd &#x2F;opt</span><br><span class="line"></span><br><span class="line">tar -zxvf hadoop-3.2.2.tar.gz</span><br><span class="line"></span><br><span class="line">cd hadoop-3.2.2</span><br><span class="line"></span><br><span class="line">&#x2F;opt&#x2F;hadoop-3.2.2&#x2F;etc&#x2F;hadoop</span><br><span class="line"></span><br><span class="line">vi hadoop-env.sh</span><br><span class="line"></span><br><span class="line">JAVA_HOME&#x3D;&#x2F;opt&#x2F;jdk1.8.0_221</span><br><span class="line"></span><br><span class="line">测试命令</span><br><span class="line">&#x2F;opt&#x2F;hadoop-3.2.2&#x2F;bin&#x2F;hadoop</span><br><span class="line"></span><br><span class="line">#By default, Hadoop is configured to run in a non-distributed mode, as a single Java process. This is useful for debugging.</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h2><span id="pseudo-distributed-operation-伪分布式模式">Pseudo-Distributed Operation 伪分布式模式</span></h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br></pre></td><td class="code"><pre><span class="line">cd &#x2F;opt&#x2F;hadoop-3.2.2&#x2F;etc&#x2F;hadoop</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">vi core-site.xml</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">&lt;configuration&gt;</span><br><span class="line">    &lt;property&gt;</span><br><span class="line">        &lt;name&gt;fs.defaultFS&lt;&#x2F;name&gt;</span><br><span class="line">        &lt;value&gt;hdfs:&#x2F;&#x2F;192.168.67.21:9000&lt;&#x2F;value&gt;</span><br><span class="line">    &lt;&#x2F;property&gt;</span><br><span class="line">&lt;&#x2F;configuration&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">vi hdfs-site.xml</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">&lt;configuration&gt;</span><br><span class="line">    &lt;property&gt;</span><br><span class="line">        &lt;name&gt;dfs.replication&lt;&#x2F;name&gt;</span><br><span class="line">        &lt;value&gt;1&lt;&#x2F;value&gt;</span><br><span class="line">    &lt;&#x2F;property&gt;</span><br><span class="line">&lt;&#x2F;configuration&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Format the filesystem</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">bin&#x2F;hdfs namenode -format</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Start NameNode daemon and DataNode daemon</span><br><span class="line"></span><br><span class="line">sbin&#x2F;start-dfs.sh</span><br><span class="line"></span><br><span class="line">报错：</span><br><span class="line">Starting namenodes on [hadoop]</span><br><span class="line">ERROR: Attempting to operate on hdfs namenode as root</span><br><span class="line">ERROR: but there is no HDFS_NAMENODE_USER defined. Aborting operation.</span><br><span class="line">Starting datanodes</span><br><span class="line">ERROR: Attempting to operate on hdfs datanode as root</span><br><span class="line">ERROR: but there is no HDFS_DATANODE_USER defined. Aborting operation.</span><br><span class="line">Starting secondary namenodes [hadoop]</span><br><span class="line">ERROR: Attempting to operate on hdfs secondarynamenode as root</span><br><span class="line">ERROR: but there is no HDFS_SECONDARYNAMENODE_USER defined. Aborting operation.</span><br><span class="line"></span><br><span class="line">vi hadoop-env.sh</span><br><span class="line">export HDFS_NAMENODE_USER&#x3D;root</span><br><span class="line">export HDFS_DATANODE_USER&#x3D;root</span><br><span class="line">export HDFS_SECONDARYNAMENODE_USER&#x3D;root</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">再次执行：sbin&#x2F;start-dfs.sh</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">OK</span><br><span class="line"></span><br><span class="line">[root@hadoop hadoop-3.2.2]# jps -l</span><br><span class="line">2066 org.apache.hadoop.hdfs.server.namenode.NameNode</span><br><span class="line">2418 org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode</span><br><span class="line">2202 org.apache.hadoop.hdfs.server.datanode.DataNode</span><br><span class="line">2542 sun.tools.jps.Jps</span><br><span class="line">[root@hadoop hadoop-3.2.2]# </span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">停止</span><br><span class="line">$ sbin&#x2F;stop-dfs.sh</span><br></pre></td></tr></table></figure>
+
+<h3><span id="yarn-on-a-single-node">YARN on a Single Node</span></h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line">vi etc&#x2F;hadoop&#x2F;mapred-site.xml</span><br><span class="line"></span><br><span class="line">&lt;configuration&gt;</span><br><span class="line">    &lt;property&gt;</span><br><span class="line">        &lt;name&gt;mapreduce.framework.name&lt;&#x2F;name&gt;</span><br><span class="line">        &lt;value&gt;yarn&lt;&#x2F;value&gt;</span><br><span class="line">    &lt;&#x2F;property&gt;</span><br><span class="line">    &lt;property&gt;</span><br><span class="line">        &lt;name&gt;mapreduce.application.classpath&lt;&#x2F;name&gt;</span><br><span class="line">        &lt;value&gt;$HADOOP_MAPRED_HOME&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;*:$HADOOP_MAPRED_HOME&#x2F;share&#x2F;hadoop&#x2F;mapreduce&#x2F;lib&#x2F;*         &lt;&#x2F;value&gt;</span><br><span class="line">    &lt;&#x2F;property&gt;</span><br><span class="line">&lt;&#x2F;configuration&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">vi etc&#x2F;hadoop&#x2F;yarn-site.xml</span><br><span class="line"></span><br><span class="line">&lt;configuration&gt;</span><br><span class="line">    &lt;property&gt;</span><br><span class="line">        &lt;name&gt;yarn.nodemanager.aux-services&lt;&#x2F;name&gt;</span><br><span class="line">        &lt;value&gt;mapreduce_shuffle&lt;&#x2F;value&gt;</span><br><span class="line">    &lt;&#x2F;property&gt;</span><br><span class="line">    &lt;property&gt;</span><br><span class="line">        &lt;name&gt;yarn.nodemanager.env-whitelist&lt;&#x2F;name&gt;</span><br><span class="line">        &lt;value&gt;JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_MAPRED_HOME&lt;&#x2F;value&gt;</span><br><span class="line">    &lt;&#x2F;property&gt;</span><br><span class="line">&lt;&#x2F;configuration&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">sbin&#x2F;start-yarn.sh</span><br><span class="line"></span><br><span class="line">Starting resourcemanager</span><br><span class="line">ERROR: Attempting to operate on yarn resourcemanager as root</span><br><span class="line">ERROR: but there is no YARN_RESOURCEMANAGER_USER defined. Aborting operation.</span><br><span class="line">Starting nodemanagers</span><br><span class="line">ERROR: Attempting to operate on yarn nodemanager as root</span><br><span class="line">ERROR: but there is no YARN_NODEMANAGER_USER defined. Aborting operation.</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">vi etc&#x2F;hadoop&#x2F;yarn-env.sh</span><br><span class="line"></span><br><span class="line">export YARN_RESOURCEMANAGER_USER&#x3D;root</span><br><span class="line">export YARN_NODEMANAGER_USER&#x3D;root</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">sbin&#x2F;start-yarn.sh</span><br><span class="line"></span><br><span class="line">sbin&#x2F;start-dfs.sh</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">[root@hadoop hadoop-3.2.2]# jps -l</span><br><span class="line">3328 org.apache.hadoop.yarn.server.resourcemanager.ResourceManager</span><br><span class="line">4432 sun.tools.jps.Jps</span><br><span class="line">3956 org.apache.hadoop.hdfs.server.namenode.NameNode</span><br><span class="line">4118 org.apache.hadoop.hdfs.server.datanode.DataNode</span><br><span class="line">3466 org.apache.hadoop.yarn.server.nodemanager.NodeManager</span><br><span class="line">4317 org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode</span><br><span class="line">[root@hadoop hadoop-3.2.2]#</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+<h1><span id="hadoop-cluster-setup">Hadoop Cluster Setup</span></h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br></pre></td><td class="code"><pre><span class="line">#各进程JVM参数修改</span><br><span class="line">etc&#x2F;hadoop&#x2F;mapred-env.sh</span><br><span class="line">etc&#x2F;hadoop&#x2F;yarn-env.sh</span><br><span class="line">etc&#x2F;hadoop&#x2F;hadoop-env.sh</span><br><span class="line"></span><br><span class="line">NameNode	HDFS_NAMENODE_OPTS</span><br><span class="line">DataNode	HDFS_DATANODE_OPTS</span><br><span class="line">Secondary NameNode	HDFS_SECONDARYNAMENODE_OPTS</span><br><span class="line">ResourceManager	YARN_RESOURCEMANAGER_OPTS</span><br><span class="line">NodeManager	YARN_NODEMANAGER_OPTS</span><br><span class="line">WebAppProxy	YARN_PROXYSERVER_OPTS</span><br><span class="line">Map Reduce Job History Server	MAPRED_HISTORYSERVER_OPTS</span><br><span class="line"></span><br><span class="line">#例如hadoop-env.sh</span><br><span class="line"></span><br><span class="line">export HDFS_NAMENODE_OPTS&#x3D;&quot;-XX:+UseParallelGC -Xmx4g&quot;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">#etc&#x2F;hadoop&#x2F;core-site.xml</span><br><span class="line">fs.defaultFS	NameNode URI	hdfs:&#x2F;&#x2F;host:port&#x2F;</span><br><span class="line">io.file.buffer.size	131072	Size of read&#x2F;write buffer used in SequenceFiles.</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">#etc&#x2F;hadoop&#x2F;hdfs-site.xml</span><br><span class="line">dfs.namenode.name.dir	</span><br><span class="line">Path on the local filesystem where the NameNode stores the namespace and transactions logs persistently.	If this is a comma-delimited list of directories then the name table is replicated in all of the directories, for redundancy.</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">dfs.hosts &#x2F; dfs.hosts.exclude	</span><br><span class="line">List of permitted&#x2F;excluded DataNodes.	If necessary, use these files to control the list of allowable datanodes.</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">dfs.blocksize	268435456	HDFS blocksize of 256MB for large file-systems.</span><br><span class="line">dfs.namenode.handler.count	100	More NameNode server threads to handle RPCs from large number of DataNodes.</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">dfs.datanode.data.dir  </span><br><span class="line">Comma separated list of paths on the local filesystem of a DataNode where it should store its blocks.</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">etc&#x2F;hadoop&#x2F;yarn-site.xml</span><br><span class="line"></span><br><span class="line">yarn.acl.enable</span><br><span class="line">yarn.admin.acl</span><br><span class="line">yarn.log-aggregation-enable</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">yarn.resourcemanager.address</span><br><span class="line"></span><br><span class="line">yarn.resourcemanager.scheduler.address</span><br><span class="line"></span><br><span class="line">yarn.resourcemanager.resource-tracker.address</span><br><span class="line"></span><br><span class="line">yarn.resourcemanager.resource-tracker.address</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">yarn.resourcemanager.resource-tracker.address</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">yarn.resourcemanager.hostname</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">yarn.nodemanager.resource.memory-mb</span><br><span class="line"></span><br><span class="line">yarn.nodemanager.resource.memory-mb</span><br><span class="line"></span><br><span class="line">yarn.nodemanager.local-dirs</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">[hdfs]$ $HADOOP_HOME&#x2F;sbin&#x2F;start-dfs.sh</span><br><span class="line"></span><br><span class="line">[yarn]$ $HADOOP_HOME&#x2F;sbin&#x2F;start-yarn.sh</span><br></pre></td></tr></table></figure>
+
+
+
+<p>举例：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br></pre></td><td class="code"><pre><span class="line">#配置免密</span><br><span class="line"></span><br><span class="line">配置&#x2F;etc&#x2F;hosts</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">#关闭防火墙</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">hadoop-env.sh</span><br><span class="line"></span><br><span class="line">export JAVA_HOME&#x3D;&#x2F;usr&#x2F;local&#x2F;src&#x2F;jdk1.8</span><br><span class="line">export HADOOP_LOG_DIR&#x3D;&#x2F;data&#x2F;hadoop_repo&#x2F;logs&#x2F;hadoop</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">core-site.xml</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">&lt;configuration&gt;</span><br><span class="line">    &lt;property&gt;</span><br><span class="line">        &lt;name&gt;fs.defaultFS&lt;&#x2F;name&gt;</span><br><span class="line">        &lt;value&gt;hdfs:&#x2F;&#x2F;hadoop1:9000&lt;&#x2F;value&gt;</span><br><span class="line">    &lt;&#x2F;property&gt;</span><br><span class="line">    &lt;property&gt;</span><br><span class="line">        &lt;name&gt;hadoop.tmp.dir&lt;&#x2F;name&gt;</span><br><span class="line">        &lt;value&gt;&#x2F;data&#x2F;hadoop_repo&lt;&#x2F;value&gt;</span><br><span class="line">    &lt;&#x2F;property&gt;</span><br><span class="line">&lt;&#x2F;configuration&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">hdfs-site.xml</span><br><span class="line"></span><br><span class="line">&lt;configuration&gt;</span><br><span class="line">    &lt;property&gt;</span><br><span class="line">        &lt;name&gt;dfs.replication&lt;&#x2F;name&gt;</span><br><span class="line">        &lt;value&gt;2&lt;&#x2F;value&gt;</span><br><span class="line">    &lt;&#x2F;property&gt;</span><br><span class="line">    &lt;property&gt;</span><br><span class="line">        &lt;name&gt;dfs.namenode.secondary.http-address&lt;&#x2F;name&gt;</span><br><span class="line">        &lt;value&gt;hadoop1:50090&lt;&#x2F;value&gt;</span><br><span class="line">    &lt;&#x2F;property&gt;</span><br><span class="line">&lt;&#x2F;configuration&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">mapred-site.xml</span><br><span class="line">&lt;configuration&gt;</span><br><span class="line">    &lt;property&gt;</span><br><span class="line">        &lt;name&gt;mapreduce.framework.name&lt;&#x2F;name&gt;</span><br><span class="line">        &lt;value&gt;yarn&lt;&#x2F;value&gt;</span><br><span class="line">    &lt;&#x2F;property&gt;</span><br><span class="line">&lt;&#x2F;configuration&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">yarn-site.xml</span><br><span class="line"></span><br><span class="line">&lt;configuration&gt;</span><br><span class="line">  &lt;property&gt;</span><br><span class="line">    &lt;name&gt;yarn.nodemanager.aux-services&lt;&#x2F;name&gt;</span><br><span class="line">    &lt;value&gt;mapreduce_shuffle&lt;&#x2F;value&gt;</span><br><span class="line">  &lt;&#x2F;property&gt;</span><br><span class="line">  &lt;property&gt;</span><br><span class="line">    &lt;name&gt;yarn.nodemanager.env-whitelist&lt;&#x2F;name&gt;</span><br><span class="line">    &lt;value&gt;JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PREPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_MAPRED_HOME&lt;&#x2F;value&gt;</span><br><span class="line">  &lt;&#x2F;property&gt;</span><br><span class="line">  &lt;property&gt;</span><br><span class="line">    &lt;name&gt;yarn.resourcemanager.hostname&lt;&#x2F;name&gt;</span><br><span class="line">    &lt;value&gt;hadoop1&lt;&#x2F;value&gt;</span><br><span class="line">  &lt;&#x2F;property&gt;</span><br><span class="line">&lt;&#x2F;configuration&gt;</span><br><span class="line"></span><br><span class="line">从节点的主机名</span><br><span class="line">vim &#x2F;opt&#x2F;hadoop&#x2F;etc&#x2F;hadoop&#x2F;workers</span><br><span class="line"></span><br><span class="line">hadoop2</span><br><span class="line">hadoop3</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">start-dfs.sh，stop-dfs.sh</span><br><span class="line">HDFS_DATANODE_USER&#x3D;root</span><br><span class="line">HDFS_DATANODE_SECURE_USER&#x3D;hdfs</span><br><span class="line">HDFS_NAMENODE_USER&#x3D;root</span><br><span class="line">HDFS_SECONDARYNAMENODE_USER&#x3D;root</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">start-yarn.sh，stop-yarn.sh</span><br><span class="line"></span><br><span class="line">YARN_RESOURCEMANAGER_USER&#x3D;root</span><br><span class="line">HADOOP_SECURE_DN_USER&#x3D;yarn</span><br><span class="line">YARN_NODEMANAGER_USER&#x3D;root</span><br></pre></td></tr></table></figure>
+
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Hadoop/" rel="tag"># Hadoop</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/03/17/docker/" rel="prev" title="Docker知识库">
+      <i class="fa fa-chevron-left"></i> Docker知识库
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/03/18/cdh/" rel="next" title="Cloudera CDH 大数据平台安装手册">
+      Cloudera CDH 大数据平台安装手册 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#"><span class="nav-number">1.</span> <span class="nav-text">Hadoop安装</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#"><span class="nav-number"></span> <span class="nav-text">Single Node Cluster</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#"><span class="nav-number">1.</span> <span class="nav-text">Pseudo-Distributed Operation 伪分布式模式</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#"><span class="nav-number">1.1.</span> <span class="nav-text">YARN on a Single Node</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#"><span class="nav-number"></span> <span class="nav-text">Hadoop Cluster Setup</span></a></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">李宁</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">39</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">71</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">李宁</span>
+</div>
+  <div class="powered-by">万物之始，大道至简
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">知易行难，悟在天成
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

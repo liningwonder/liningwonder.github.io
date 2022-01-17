@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"localhost","root":"/","scheme":"Muse","version":"7.7.2","exturl":false,"sidebar":{"position":"left","display":"hide","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="ClickHouse安装 安装条件与准备 单机安装 Docker安装   集群部署   配置       ClickHouse安装安装条件与准备 关闭防火墙  1234#关闭防火墙systemctl stop firewalld.service#禁止开机启动systemctl disable firewalld.service   验证服务器是否支持SSE4.2指令集  由于ClickHou">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ClickHouse">
+<meta property="og:url" content="http://localhost:4000/2020/08/19/ClickHouse%E5%AE%89%E8%A3%85/index.html">
+<meta property="og:site_name" content="李宁的博客">
+<meta property="og:description" content="ClickHouse安装 安装条件与准备 单机安装 Docker安装   集群部署   配置       ClickHouse安装安装条件与准备 关闭防火墙  1234#关闭防火墙systemctl stop firewalld.service#禁止开机启动systemctl disable firewalld.service   验证服务器是否支持SSE4.2指令集  由于ClickHou">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-08-18T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-01-17T01:38:39.063Z">
+<meta property="article:author" content="李宁">
+<meta property="article:tag" content="ClickHouse">
+<meta property="article:tag" content="OLAP">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://localhost:4000/2020/08/19/ClickHouse%E5%AE%89%E8%A3%85/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true
+  };
+</script>
+
+  <title>ClickHouse | 李宁的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">李宁的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+  </ul>
+
+</nav>
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://localhost:4000/2020/08/19/ClickHouse%E5%AE%89%E8%A3%85/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="李宁">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="李宁的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          ClickHouse
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-08-19 00:00:00" itemprop="dateCreated datePublished" datetime="2020-08-19T00:00:00+08:00">2020-08-19</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2022-01-17 09:38:39" itemprop="dateModified" datetime="2022-01-17T09:38:39+08:00">2022-01-17</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ClickHouse/" itemprop="url" rel="index"><span itemprop="name">ClickHouse</span></a>
+                </span>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <!-- toc -->
+
+<ul>
+<li><a href="#clickhouse安装">ClickHouse安装</a><ul>
+<li><a href="#安装条件与准备">安装条件与准备</a></li>
+<li><a href="#单机安装">单机安装</a></li>
+<li><a href="#docker安装">Docker安装</a></li>
+</ul>
+<ul>
+<li><a href="#集群部署">集群部署</a></li>
+</ul>
+<ul>
+<li><a href="#配置">配置</a></li>
+</ul>
+</li>
+</ul>
+<!-- tocstop -->
+
+<hr>
+<h3><span id="clickhouse安装">ClickHouse安装</span></h3><h4><span id="安装条件与准备">安装条件与准备</span></h4><ol>
+<li>关闭防火墙</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">关闭防火墙</span></span><br><span class="line">systemctl stop firewalld.service</span><br><span class="line"><span class="meta">#</span><span class="bash">禁止开机启动</span></span><br><span class="line">systemctl disable firewalld.service</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li>验证服务器是否支持SSE4.2指令集</li>
+</ol>
+<p>由于ClickHouse用到了向量化执行，因此需要用到该指令集。执行下面的命令，若输出 SSE 4.2 supported则表示支持。如果机器不支持，则需要自己编译特定的安装包</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">$</span><span class="bash"> grep -q sse4_2 /proc/cpuinfo &amp;&amp; <span class="built_in">echo</span> <span class="string">"SSE 4.2 supported"</span> || <span class="built_in">echo</span> <span class="string">"SSE 4.2 not supported"</span></span></span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>设置FQDN（Fully Qualified Domain Name）</li>
+</ol>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">hostnamectl --static set-hostname node130.unionpay.com</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash">验证修改是否生效</span></span><br><span class="line">hostname -f</span><br><span class="line"></span><br><span class="line">vi /etc/hosts</span><br><span class="line"></span><br><span class="line">192.168.67.130 node130.unionpay.com</span><br></pre></td></tr></table></figure>
+
+<h4><span id="单机安装">单机安装</span></h4><p>下载地址 <a href="https://repo.clickhouse.tech/rpm/stable/x86_64/" target="_blank" rel="noopener">https://repo.clickhouse.tech/rpm/stable/x86_64/</a></p>
+<p>需要下载的包有：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">export LATEST_VERSION=`curl https://api.github.com/repos/ClickHouse/ClickHouse/tags 2&gt;/dev/null | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n 1`</span><br><span class="line">curl -O https://repo.clickhouse.tech/tgz/clickhouse-common-static-$LATEST_VERSION.tgz</span><br><span class="line">curl -O https://repo.clickhouse.tech/tgz/clickhouse-common-static-dbg-$LATEST_VERSION.tgz</span><br><span class="line">curl -O https://repo.clickhouse.tech/tgz/clickhouse-server-$LATEST_VERSION.tgz</span><br><span class="line">curl -O https://repo.clickhouse.tech/tgz/clickhouse-client-$LATEST_VERSION.tgz</span><br><span class="line"></span><br><span class="line">tar -xzvf clickhouse-common-static-$LATEST_VERSION.tgz</span><br><span class="line">sudo clickhouse-common-static-$LATEST_VERSION/install/doinst.sh</span><br><span class="line"></span><br><span class="line">tar -xzvf clickhouse-common-static-dbg-$LATEST_VERSION.tgz</span><br><span class="line">sudo clickhouse-common-static-dbg-$LATEST_VERSION/install/doinst.sh</span><br><span class="line"></span><br><span class="line">tar -xzvf clickhouse-server-$LATEST_VERSION.tgz</span><br><span class="line">sudo clickhouse-server-$LATEST_VERSION/install/doinst.sh</span><br><span class="line">sudo /etc/init.d/clickhouse-server start</span><br><span class="line"></span><br><span class="line">tar -xzvf clickhouse-client-$LATEST_VERSION.tgz</span><br><span class="line">sudo clickhouse-client-$LATEST_VERSION/install/doinst.sh</span><br></pre></td></tr></table></figure>
+
+<p>或者添加仓库</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">sudo yum install yum-utils</span><br><span class="line">sudo rpm --import https://repo.clickhouse.tech/CLICKHOUSE-KEY.GPG</span><br><span class="line">sudo yum-config-manager --add-repo https://repo.clickhouse.tech/rpm/stable/x86_64</span><br></pre></td></tr></table></figure>
+
+<p>安装</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo yum install clickhouse-server clickhouse-client</span><br></pre></td></tr></table></figure>
+
+<p>启动</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">sudo service clickhouse-server start</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash">或者</span></span><br><span class="line">sudo /etc/init.d/clickhouse-server start</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash">或者</span></span><br><span class="line"><span class="meta">$</span><span class="bash"> clickhouse-server --config-file=/etc/clickhouse-server/config.xml</span></span><br></pre></td></tr></table></figure>
+
+<p>日志目录</p>
+<p>/var/log/clickhouse-server/</p>
+<p>配置文件</p>
+<p>/etc/clickhouse-server/config.xml</p>
+<p>可以修改默认的数据存储目录</p>
+<p>数据目录</p>
+<p>/var/lib/clickhouse</p>
+<p>客户端</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash">默认连接本机localhost:9000</span></span><br><span class="line">clickhouse-client</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash">或者</span></span><br><span class="line">clickhouse-client --host</span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash">或者</span></span><br><span class="line">./clickhouse-client</span><br></pre></td></tr></table></figure>
+
+
+
+<h4><span id="docker安装">Docker安装</span></h4><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">docker pull yandex/clickhouse-server</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span></span><br><span class="line">docker run -d --name some-clickhouse-server --ulimit nofile=262144:262144 yandex/clickhouse-server</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">#</span><span class="bash">或者制定存储卷</span></span><br><span class="line">mkdir $HOME/some_clickhouse_database</span><br><span class="line">docker run -d --name some-clickhouse-server --ulimit nofile=262144:262144 --volume=$HOME/some_clickhouse_database:/var/lib/clickhouse yandex/clickhouse-server</span><br></pre></td></tr></table></figure>
+
+
+
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker run -it --rm --link some-clickhouse-server:clickhouse-server yandex/clickhouse-client --host clickhouse-server</span><br></pre></td></tr></table></figure>
+
+
+
+<h2><span id="集群部署">集群部署</span></h2><p>三分片</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">&lt;remote_servers&gt;</span><br><span class="line">    &lt;perftest_3shards_1replicas&gt;</span><br><span class="line">        &lt;shard&gt;</span><br><span class="line">            &lt;replica&gt;</span><br><span class="line">                &lt;host&gt;example-perftest01j.yandex.ru&lt;&#x2F;host&gt;</span><br><span class="line">                &lt;port&gt;9000&lt;&#x2F;port&gt;</span><br><span class="line">            &lt;&#x2F;replica&gt;</span><br><span class="line">        &lt;&#x2F;shard&gt;</span><br><span class="line">        &lt;shard&gt;</span><br><span class="line">            &lt;replica&gt;</span><br><span class="line">                &lt;host&gt;example-perftest02j.yandex.ru&lt;&#x2F;host&gt;</span><br><span class="line">                &lt;port&gt;9000&lt;&#x2F;port&gt;</span><br><span class="line">            &lt;&#x2F;replica&gt;</span><br><span class="line">        &lt;&#x2F;shard&gt;</span><br><span class="line">        &lt;shard&gt;</span><br><span class="line">            &lt;replica&gt;</span><br><span class="line">                &lt;host&gt;example-perftest03j.yandex.ru&lt;&#x2F;host&gt;</span><br><span class="line">                &lt;port&gt;9000&lt;&#x2F;port&gt;</span><br><span class="line">            &lt;&#x2F;replica&gt;</span><br><span class="line">        &lt;&#x2F;shard&gt;</span><br><span class="line">    &lt;&#x2F;perftest_3shards_1replicas&gt;</span><br><span class="line">&lt;&#x2F;remote_servers&gt;</span><br></pre></td></tr></table></figure>
+
+<p>需要 ZooKeeper 3.4.5 或更高版本。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">&lt;zookeeper&gt;</span><br><span class="line">    &lt;node&gt;</span><br><span class="line">        &lt;host&gt;zoo01.yandex.ru&lt;&#x2F;host&gt;</span><br><span class="line">        &lt;port&gt;2181&lt;&#x2F;port&gt;</span><br><span class="line">    &lt;&#x2F;node&gt;</span><br><span class="line">    &lt;node&gt;</span><br><span class="line">        &lt;host&gt;zoo02.yandex.ru&lt;&#x2F;host&gt;</span><br><span class="line">        &lt;port&gt;2181&lt;&#x2F;port&gt;</span><br><span class="line">    &lt;&#x2F;node&gt;</span><br><span class="line">    &lt;node&gt;</span><br><span class="line">        &lt;host&gt;zoo03.yandex.ru&lt;&#x2F;host&gt;</span><br><span class="line">        &lt;port&gt;2181&lt;&#x2F;port&gt;</span><br><span class="line">    &lt;&#x2F;node&gt;</span><br><span class="line">&lt;&#x2F;zookeeper&gt;</span><br></pre></td></tr></table></figure>
+
+<p>需要设置宏来识别每个用于创建表的分片和副本。如上例所示，这些参数可以包含宏替换的占位符，即大括号的部分。它们会被替换为配置文件里 ‘macros’ 那部分配置的值。示例：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">&lt;macros&gt;</span><br><span class="line">    &lt;shard&gt;01&lt;&#x2F;shard&gt;</span><br><span class="line">    &lt;replica&gt;01&lt;&#x2F;replica&gt;</span><br><span class="line">&lt;&#x2F;macros&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">&lt;macros&gt;</span><br><span class="line">    &lt;layer&gt;05&lt;&#x2F;layer&gt;</span><br><span class="line">    &lt;shard&gt;02&lt;&#x2F;shard&gt;</span><br><span class="line">    &lt;replica&gt;example05-02-1.yandex.ru&lt;&#x2F;replica&gt;</span><br><span class="line">&lt;&#x2F;macros&gt;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">CREATE TABLE table_name</span><br><span class="line">(</span><br><span class="line">    EventDate DateTime,</span><br><span class="line">    CounterID UInt32,</span><br><span class="line">    UserID UInt32</span><br><span class="line">) ENGINE &#x3D; ReplicatedMergeTree(&#39;&#x2F;clickhouse&#x2F;tables&#x2F;&#123;layer&#125;-&#123;shard&#125;&#x2F;table_name&#39;, &#39;&#123;replica&#125;&#39;, EventDate, intHash32(UserID), (CounterID, EventDate, intHash32(UserID), EventTime), 8192)</span><br></pre></td></tr></table></figure>
+
+
+
+<h4><span id="配置">配置</span></h4><p>/etc/clickhouse-server/config.xml</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">&lt;?xml version="1.0"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">yandex</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">logger</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">level</span>&gt;</span>trace<span class="tag">&lt;/<span class="name">level</span>&gt;</span></span><br><span class="line">         <span class="comment">&lt;!-- 日志位置 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">log</span>&gt;</span>/data/clickhouse/log/clickhouse-server.log<span class="tag">&lt;/<span class="name">log</span>&gt;</span></span><br><span class="line">         <span class="comment">&lt;!-- 错误日志 --&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">errorlog</span>&gt;</span>/data/clickhouse/log/clickhouse-server.err.log<span class="tag">&lt;/<span class="name">errorlog</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">size</span>&gt;</span>1000M<span class="tag">&lt;/<span class="name">size</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">count</span>&gt;</span>10<span class="tag">&lt;/<span class="name">count</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">logger</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">send_crash_reports</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">enabled</span>&gt;</span>false<span class="tag">&lt;/<span class="name">enabled</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">anonymize</span>&gt;</span>false<span class="tag">&lt;/<span class="name">anonymize</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">endpoint</span>&gt;</span>https://6f33034cfe684dd7a3ab9875e57b1c8d@o388870.ingest.sentry.io/5226277<span class="tag">&lt;/<span class="name">endpoint</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">send_crash_reports</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">http_port</span>&gt;</span>8123<span class="tag">&lt;/<span class="name">http_port</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">tcp_port</span>&gt;</span>9000<span class="tag">&lt;/<span class="name">tcp_port</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">mysql_port</span>&gt;</span>9004<span class="tag">&lt;/<span class="name">mysql_port</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">openSSL</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">server</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">certificateFile</span>&gt;</span>/etc/clickhouse-server/server.crt<span class="tag">&lt;/<span class="name">certificateFile</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">privateKeyFile</span>&gt;</span>/etc/clickhouse-server/server.key<span class="tag">&lt;/<span class="name">privateKeyFile</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">dhParamsFile</span>&gt;</span>/etc/clickhouse-server/dhparam.pem<span class="tag">&lt;/<span class="name">dhParamsFile</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">verificationMode</span>&gt;</span>none<span class="tag">&lt;/<span class="name">verificationMode</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">loadDefaultCAFile</span>&gt;</span>true<span class="tag">&lt;/<span class="name">loadDefaultCAFile</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">cacheSessions</span>&gt;</span>true<span class="tag">&lt;/<span class="name">cacheSessions</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">disableProtocols</span>&gt;</span>sslv2,sslv3<span class="tag">&lt;/<span class="name">disableProtocols</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">preferServerCiphers</span>&gt;</span>true<span class="tag">&lt;/<span class="name">preferServerCiphers</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">server</span>&gt;</span></span><br><span class="line"></span><br><span class="line">        <span class="tag">&lt;<span class="name">client</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">loadDefaultCAFile</span>&gt;</span>true<span class="tag">&lt;/<span class="name">loadDefaultCAFile</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">cacheSessions</span>&gt;</span>true<span class="tag">&lt;/<span class="name">cacheSessions</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">disableProtocols</span>&gt;</span>sslv2,sslv3<span class="tag">&lt;/<span class="name">disableProtocols</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">preferServerCiphers</span>&gt;</span>true<span class="tag">&lt;/<span class="name">preferServerCiphers</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">invalidCertificateHandler</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">name</span>&gt;</span>RejectCertificateHandler<span class="tag">&lt;/<span class="name">name</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">invalidCertificateHandler</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">client</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">openSSL</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">interserver_http_port</span>&gt;</span>9009<span class="tag">&lt;/<span class="name">interserver_http_port</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">listen_host</span>&gt;</span>::<span class="tag">&lt;/<span class="name">listen_host</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">max_connections</span>&gt;</span>4096<span class="tag">&lt;/<span class="name">max_connections</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">keep_alive_timeout</span>&gt;</span>3<span class="tag">&lt;/<span class="name">keep_alive_timeout</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">max_concurrent_queries</span>&gt;</span>100<span class="tag">&lt;/<span class="name">max_concurrent_queries</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">max_server_memory_usage</span>&gt;</span>0<span class="tag">&lt;/<span class="name">max_server_memory_usage</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">max_thread_pool_size</span>&gt;</span>10000<span class="tag">&lt;/<span class="name">max_thread_pool_size</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">max_server_memory_usage_to_ram_ratio</span>&gt;</span>0.9<span class="tag">&lt;/<span class="name">max_server_memory_usage_to_ram_ratio</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">total_memory_profiler_step</span>&gt;</span>4194304<span class="tag">&lt;/<span class="name">total_memory_profiler_step</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">total_memory_tracker_sample_probability</span>&gt;</span>0<span class="tag">&lt;/<span class="name">total_memory_tracker_sample_probability</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">uncompressed_cache_size</span>&gt;</span>8589934592<span class="tag">&lt;/<span class="name">uncompressed_cache_size</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">mark_cache_size</span>&gt;</span>5368709120<span class="tag">&lt;/<span class="name">mark_cache_size</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">&lt;!-- 数据目录 --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">path</span>&gt;</span>/data/clickhouse/data<span class="tag">&lt;/<span class="name">path</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!-- 数据目录 --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">tmp_path</span>&gt;</span>/data/clickhouse/data/tmp/<span class="tag">&lt;/<span class="name">tmp_path</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">user_files_path</span>&gt;</span>/var/lib/clickhouse/user_files/<span class="tag">&lt;/<span class="name">user_files_path</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">access_control_path</span>&gt;</span>/var/lib/clickhouse/access/<span class="tag">&lt;/<span class="name">access_control_path</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">ldap_servers</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">ldap_servers</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">users_config</span>&gt;</span>users.xml<span class="tag">&lt;/<span class="name">users_config</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">default_profile</span>&gt;</span>default<span class="tag">&lt;/<span class="name">default_profile</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">custom_settings_prefixes</span>&gt;</span><span class="tag">&lt;/<span class="name">custom_settings_prefixes</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">default_database</span>&gt;</span>default<span class="tag">&lt;/<span class="name">default_database</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!-- 修改时区 --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">timezone</span>&gt;</span>Asia/Shanghai<span class="tag">&lt;/<span class="name">timezone</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">mlock_executable</span>&gt;</span>true<span class="tag">&lt;/<span class="name">mlock_executable</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">remote_servers</span> <span class="attr">incl</span>=<span class="string">"clickhouse_remote_servers"</span> &gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">test_shard_localhost</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">shard</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">replica</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">host</span>&gt;</span>localhost<span class="tag">&lt;/<span class="name">host</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">port</span>&gt;</span>9000<span class="tag">&lt;/<span class="name">port</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;/<span class="name">replica</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">shard</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">test_shard_localhost</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">test_cluster_two_shards_localhost</span>&gt;</span></span><br><span class="line">             <span class="tag">&lt;<span class="name">shard</span>&gt;</span></span><br><span class="line">                 <span class="tag">&lt;<span class="name">replica</span>&gt;</span></span><br><span class="line">                     <span class="tag">&lt;<span class="name">host</span>&gt;</span>localhost<span class="tag">&lt;/<span class="name">host</span>&gt;</span></span><br><span class="line">                     <span class="tag">&lt;<span class="name">port</span>&gt;</span>9000<span class="tag">&lt;/<span class="name">port</span>&gt;</span></span><br><span class="line">                 <span class="tag">&lt;/<span class="name">replica</span>&gt;</span></span><br><span class="line">             <span class="tag">&lt;/<span class="name">shard</span>&gt;</span></span><br><span class="line">             <span class="tag">&lt;<span class="name">shard</span>&gt;</span></span><br><span class="line">                 <span class="tag">&lt;<span class="name">replica</span>&gt;</span></span><br><span class="line">                     <span class="tag">&lt;<span class="name">host</span>&gt;</span>localhost<span class="tag">&lt;/<span class="name">host</span>&gt;</span></span><br><span class="line">                     <span class="tag">&lt;<span class="name">port</span>&gt;</span>9000<span class="tag">&lt;/<span class="name">port</span>&gt;</span></span><br><span class="line">                 <span class="tag">&lt;/<span class="name">replica</span>&gt;</span></span><br><span class="line">             <span class="tag">&lt;/<span class="name">shard</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">test_cluster_two_shards_localhost</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">test_cluster_two_shards</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">shard</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">replica</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">host</span>&gt;</span>127.0.0.1<span class="tag">&lt;/<span class="name">host</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">port</span>&gt;</span>9000<span class="tag">&lt;/<span class="name">port</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;/<span class="name">replica</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">shard</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">shard</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">replica</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">host</span>&gt;</span>127.0.0.2<span class="tag">&lt;/<span class="name">host</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">port</span>&gt;</span>9000<span class="tag">&lt;/<span class="name">port</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;/<span class="name">replica</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">shard</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">test_cluster_two_shards</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">test_cluster_two_shards_internal_replication</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">shard</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">internal_replication</span>&gt;</span>true<span class="tag">&lt;/<span class="name">internal_replication</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">replica</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">host</span>&gt;</span>127.0.0.1<span class="tag">&lt;/<span class="name">host</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">port</span>&gt;</span>9000<span class="tag">&lt;/<span class="name">port</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;/<span class="name">replica</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">shard</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">shard</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">internal_replication</span>&gt;</span>true<span class="tag">&lt;/<span class="name">internal_replication</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">replica</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">host</span>&gt;</span>127.0.0.2<span class="tag">&lt;/<span class="name">host</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">port</span>&gt;</span>9000<span class="tag">&lt;/<span class="name">port</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;/<span class="name">replica</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">shard</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">test_cluster_two_shards_internal_replication</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">test_shard_localhost_secure</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">shard</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">replica</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">host</span>&gt;</span>localhost<span class="tag">&lt;/<span class="name">host</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">port</span>&gt;</span>9440<span class="tag">&lt;/<span class="name">port</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">secure</span>&gt;</span>1<span class="tag">&lt;/<span class="name">secure</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;/<span class="name">replica</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">shard</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">test_shard_localhost_secure</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">test_unavailable_shard</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">shard</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">replica</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">host</span>&gt;</span>localhost<span class="tag">&lt;/<span class="name">host</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">port</span>&gt;</span>9000<span class="tag">&lt;/<span class="name">port</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;/<span class="name">replica</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">shard</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">shard</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">replica</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">host</span>&gt;</span>localhost<span class="tag">&lt;/<span class="name">host</span>&gt;</span></span><br><span class="line">                    <span class="tag">&lt;<span class="name">port</span>&gt;</span>1<span class="tag">&lt;/<span class="name">port</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;/<span class="name">replica</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">shard</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">test_unavailable_shard</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">remote_servers</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">remote_url_allow_hosts</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">remote_url_allow_hosts</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">zookeeper</span> <span class="attr">incl</span>=<span class="string">"zookeeper-servers"</span> <span class="attr">optional</span>=<span class="string">"true"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">macros</span> <span class="attr">incl</span>=<span class="string">"macros"</span> <span class="attr">optional</span>=<span class="string">"true"</span> /&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">builtin_dictionaries_reload_interval</span>&gt;</span>3600<span class="tag">&lt;/<span class="name">builtin_dictionaries_reload_interval</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">max_session_timeout</span>&gt;</span>3600<span class="tag">&lt;/<span class="name">max_session_timeout</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">default_session_timeout</span>&gt;</span>60<span class="tag">&lt;/<span class="name">default_session_timeout</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">query_log</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">database</span>&gt;</span>system<span class="tag">&lt;/<span class="name">database</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">table</span>&gt;</span>query_log<span class="tag">&lt;/<span class="name">table</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">partition_by</span>&gt;</span>toYYYYMM(event_date)<span class="tag">&lt;/<span class="name">partition_by</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">flush_interval_milliseconds</span>&gt;</span>7500<span class="tag">&lt;/<span class="name">flush_interval_milliseconds</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">query_log</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">trace_log</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">database</span>&gt;</span>system<span class="tag">&lt;/<span class="name">database</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">table</span>&gt;</span>trace_log<span class="tag">&lt;/<span class="name">table</span>&gt;</span></span><br><span class="line"></span><br><span class="line">        <span class="tag">&lt;<span class="name">partition_by</span>&gt;</span>toYYYYMM(event_date)<span class="tag">&lt;/<span class="name">partition_by</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">flush_interval_milliseconds</span>&gt;</span>7500<span class="tag">&lt;/<span class="name">flush_interval_milliseconds</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">trace_log</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">query_thread_log</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">database</span>&gt;</span>system<span class="tag">&lt;/<span class="name">database</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">table</span>&gt;</span>query_thread_log<span class="tag">&lt;/<span class="name">table</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">partition_by</span>&gt;</span>toYYYYMM(event_date)<span class="tag">&lt;/<span class="name">partition_by</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">flush_interval_milliseconds</span>&gt;</span>7500<span class="tag">&lt;/<span class="name">flush_interval_milliseconds</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">query_thread_log</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">metric_log</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">database</span>&gt;</span>system<span class="tag">&lt;/<span class="name">database</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">table</span>&gt;</span>metric_log<span class="tag">&lt;/<span class="name">table</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">flush_interval_milliseconds</span>&gt;</span>7500<span class="tag">&lt;/<span class="name">flush_interval_milliseconds</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">collect_interval_milliseconds</span>&gt;</span>1000<span class="tag">&lt;/<span class="name">collect_interval_milliseconds</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">metric_log</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">asynchronous_metric_log</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">database</span>&gt;</span>system<span class="tag">&lt;/<span class="name">database</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">table</span>&gt;</span>asynchronous_metric_log<span class="tag">&lt;/<span class="name">table</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">flush_interval_milliseconds</span>&gt;</span>60000<span class="tag">&lt;/<span class="name">flush_interval_milliseconds</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">asynchronous_metric_log</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">crash_log</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">database</span>&gt;</span>system<span class="tag">&lt;/<span class="name">database</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">table</span>&gt;</span>crash_log<span class="tag">&lt;/<span class="name">table</span>&gt;</span></span><br><span class="line"></span><br><span class="line">        <span class="tag">&lt;<span class="name">partition_by</span> /&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">flush_interval_milliseconds</span>&gt;</span>1000<span class="tag">&lt;/<span class="name">flush_interval_milliseconds</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">crash_log</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">dictionaries_config</span>&gt;</span>*_dictionary.xml<span class="tag">&lt;/<span class="name">dictionaries_config</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">compression</span> <span class="attr">incl</span>=<span class="string">"clickhouse_compression"</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">compression</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">distributed_ddl</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">path</span>&gt;</span>/clickhouse/task_queue/ddl<span class="tag">&lt;/<span class="name">path</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">distributed_ddl</span>&gt;</span></span><br><span class="line">    <span class="comment">&lt;!-- 允许truncate或者Drop表 --&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">max_table_size_to_drop</span>&gt;</span>0<span class="tag">&lt;/<span class="name">max_table_size_to_drop</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">graphite_rollup_example</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">pattern</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">regexp</span>&gt;</span>click_cost<span class="tag">&lt;/<span class="name">regexp</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">function</span>&gt;</span>any<span class="tag">&lt;/<span class="name">function</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">retention</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">age</span>&gt;</span>0<span class="tag">&lt;/<span class="name">age</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">precision</span>&gt;</span>3600<span class="tag">&lt;/<span class="name">precision</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">retention</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">retention</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">age</span>&gt;</span>86400<span class="tag">&lt;/<span class="name">age</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">precision</span>&gt;</span>60<span class="tag">&lt;/<span class="name">precision</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">retention</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">pattern</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">default</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">function</span>&gt;</span>max<span class="tag">&lt;/<span class="name">function</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">retention</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">age</span>&gt;</span>0<span class="tag">&lt;/<span class="name">age</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">precision</span>&gt;</span>60<span class="tag">&lt;/<span class="name">precision</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">retention</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">retention</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">age</span>&gt;</span>3600<span class="tag">&lt;/<span class="name">age</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">precision</span>&gt;</span>300<span class="tag">&lt;/<span class="name">precision</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">retention</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">retention</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">age</span>&gt;</span>86400<span class="tag">&lt;/<span class="name">age</span>&gt;</span></span><br><span class="line">                <span class="tag">&lt;<span class="name">precision</span>&gt;</span>3600<span class="tag">&lt;/<span class="name">precision</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;/<span class="name">retention</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">default</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">graphite_rollup_example</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">format_schema_path</span>&gt;</span>/var/lib/clickhouse/format_schemas/<span class="tag">&lt;/<span class="name">format_schema_path</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">include_from</span>&gt;</span>/etc/metrika.xml<span class="tag">&lt;/<span class="name">include_from</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">yandex</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>/etc/metrika.xml</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">yandex</span>&gt;</span> </span><br><span class="line">  <span class="tag">&lt;<span class="name">clickhouse_remote_servers</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;<span class="name">perftest_3shards_1replicas</span>&gt;</span> </span><br><span class="line">      <span class="tag">&lt;<span class="name">shard</span>&gt;</span> </span><br><span class="line">        <span class="tag">&lt;<span class="name">internal_replication</span>&gt;</span>true<span class="tag">&lt;/<span class="name">internal_replication</span>&gt;</span>  </span><br><span class="line">        <span class="tag">&lt;<span class="name">replica</span>&gt;</span> </span><br><span class="line">          <span class="tag">&lt;<span class="name">host</span>&gt;</span>x.x.x.37<span class="tag">&lt;/<span class="name">host</span>&gt;</span>  </span><br><span class="line">          <span class="tag">&lt;<span class="name">port</span>&gt;</span>9000<span class="tag">&lt;/<span class="name">port</span>&gt;</span> </span><br><span class="line">        <span class="tag">&lt;/<span class="name">replica</span>&gt;</span> </span><br><span class="line">      <span class="tag">&lt;/<span class="name">shard</span>&gt;</span>  </span><br><span class="line">      <span class="tag">&lt;<span class="name">shard</span>&gt;</span> </span><br><span class="line">        <span class="tag">&lt;<span class="name">replica</span>&gt;</span> </span><br><span class="line">          <span class="tag">&lt;<span class="name">internal_replication</span>&gt;</span>true<span class="tag">&lt;/<span class="name">internal_replication</span>&gt;</span>  </span><br><span class="line">          <span class="tag">&lt;<span class="name">host</span>&gt;</span>x.x.x.38<span class="tag">&lt;/<span class="name">host</span>&gt;</span>  </span><br><span class="line">          <span class="tag">&lt;<span class="name">port</span>&gt;</span>9000<span class="tag">&lt;/<span class="name">port</span>&gt;</span> </span><br><span class="line">        <span class="tag">&lt;/<span class="name">replica</span>&gt;</span> </span><br><span class="line">      <span class="tag">&lt;/<span class="name">shard</span>&gt;</span>  </span><br><span class="line">      <span class="tag">&lt;<span class="name">shard</span>&gt;</span> </span><br><span class="line">        <span class="tag">&lt;<span class="name">internal_replication</span>&gt;</span>true<span class="tag">&lt;/<span class="name">internal_replication</span>&gt;</span>  </span><br><span class="line">        <span class="tag">&lt;<span class="name">replica</span>&gt;</span> </span><br><span class="line">          <span class="tag">&lt;<span class="name">host</span>&gt;</span>x.x.x.43<span class="tag">&lt;/<span class="name">host</span>&gt;</span>  </span><br><span class="line">          <span class="tag">&lt;<span class="name">port</span>&gt;</span>9000<span class="tag">&lt;/<span class="name">port</span>&gt;</span> </span><br><span class="line">        <span class="tag">&lt;/<span class="name">replica</span>&gt;</span> </span><br><span class="line">      <span class="tag">&lt;/<span class="name">shard</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;/<span class="name">perftest_3shards_1replicas</span>&gt;</span> </span><br><span class="line">  <span class="tag">&lt;/<span class="name">clickhouse_remote_servers</span>&gt;</span>  </span><br><span class="line">  <span class="tag">&lt;<span class="name">zookeeper-servers</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;<span class="name">node</span> <span class="attr">index</span>=<span class="string">"1"</span>&gt;</span> </span><br><span class="line">      <span class="tag">&lt;<span class="name">host</span>&gt;</span>x.x.x.55<span class="tag">&lt;/<span class="name">host</span>&gt;</span>  </span><br><span class="line">      <span class="tag">&lt;<span class="name">port</span>&gt;</span>54514<span class="tag">&lt;/<span class="name">port</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;/<span class="name">node</span>&gt;</span>  </span><br><span class="line">    <span class="tag">&lt;<span class="name">node</span> <span class="attr">index</span>=<span class="string">"2"</span>&gt;</span> </span><br><span class="line">      <span class="tag">&lt;<span class="name">host</span>&gt;</span>x.x.x.56<span class="tag">&lt;/<span class="name">host</span>&gt;</span>  </span><br><span class="line">      <span class="tag">&lt;<span class="name">port</span>&gt;</span>54514<span class="tag">&lt;/<span class="name">port</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;/<span class="name">node</span>&gt;</span>  </span><br><span class="line">    <span class="tag">&lt;<span class="name">node</span> <span class="attr">index</span>=<span class="string">"3"</span>&gt;</span> </span><br><span class="line">      <span class="tag">&lt;<span class="name">host</span>&gt;</span>x.x.x.54<span class="tag">&lt;/<span class="name">host</span>&gt;</span>  </span><br><span class="line">      <span class="tag">&lt;<span class="name">port</span>&gt;</span>54514<span class="tag">&lt;/<span class="name">port</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;/<span class="name">node</span>&gt;</span> </span><br><span class="line">  <span class="tag">&lt;/<span class="name">zookeeper-servers</span>&gt;</span>  </span><br><span class="line">  <span class="comment">&lt;!-- 创建分布式表时用得宏变量 --&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">macros</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">shard</span>&gt;</span>01<span class="tag">&lt;/<span class="name">shard</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;<span class="name">replica</span>&gt;</span>x.x.x.37<span class="tag">&lt;/<span class="name">replica</span>&gt;</span> </span><br><span class="line">  <span class="tag">&lt;/<span class="name">macros</span>&gt;</span>  </span><br><span class="line">  <span class="tag">&lt;<span class="name">networks</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;<span class="name">ip</span>&gt;</span>::/0<span class="tag">&lt;/<span class="name">ip</span>&gt;</span> </span><br><span class="line">  <span class="tag">&lt;/<span class="name">networks</span>&gt;</span>  </span><br><span class="line">  <span class="tag">&lt;<span class="name">clickhouse_compression</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;<span class="name">case</span>&gt;</span> </span><br><span class="line">      <span class="tag">&lt;<span class="name">min_part_size</span>&gt;</span>10000000000<span class="tag">&lt;/<span class="name">min_part_size</span>&gt;</span>  </span><br><span class="line">      <span class="tag">&lt;<span class="name">min_part_size_ratio</span>&gt;</span>0.01<span class="tag">&lt;/<span class="name">min_part_size_ratio</span>&gt;</span>  </span><br><span class="line">      <span class="tag">&lt;<span class="name">method</span>&gt;</span>lz4<span class="tag">&lt;/<span class="name">method</span>&gt;</span> </span><br><span class="line">    <span class="tag">&lt;/<span class="name">case</span>&gt;</span> </span><br><span class="line">  <span class="tag">&lt;/<span class="name">clickhouse_compression</span>&gt;</span> </span><br><span class="line"><span class="tag">&lt;/<span class="name">yandex</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>创建表</p>
+<p>分布式表(分布式DDL)</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> trans_inf_all <span class="keyword">ON</span> CLUSTER perftest_3shards_1replicas(</span><br><span class="line">seq_id Int64,</span><br><span class="line">prod_usr_id Int32,</span><br><span class="line">prod_id Int32,</span><br><span class="line">srv_id Int32,</span><br><span class="line">bl_id Int32,</span><br><span class="line">msg_id <span class="keyword">String</span>,</span><br><span class="line">ret_cd <span class="keyword">String</span>,</span><br><span class="line">bl Int32,</span><br><span class="line">chan_id Int32,</span><br><span class="line">rec_crt_tm DateTime,</span><br><span class="line">rec_upt_tm DateTime,</span><br><span class="line">ver Nullable(Int32),</span><br><span class="line">shp_num Nullable(<span class="keyword">String</span>),</span><br><span class="line">bk_cd_num Nullable(<span class="keyword">String</span>),</span><br><span class="line">map_id Int32,</span><br><span class="line">bk_nm Nullable(<span class="keyword">String</span>),</span><br><span class="line"><span class="keyword">name</span> Nullable(<span class="keyword">String</span>),</span><br><span class="line">certif_id Nullable(<span class="keyword">String</span>),</span><br><span class="line">mobile Nullable(<span class="keyword">String</span>),</span><br><span class="line">telecoms Nullable(<span class="keyword">String</span>),</span><br><span class="line">org_id Int32,</span><br><span class="line">trans_duration Nullable(Int64),</span><br><span class="line">total_duration Nullable(Int64),</span><br><span class="line">order_id <span class="keyword">String</span>,</span><br><span class="line">sc_name Nullable(<span class="keyword">String</span>),</span><br><span class="line">trans_id Nullable(<span class="keyword">String</span>),</span><br><span class="line">response_id Nullable(<span class="keyword">String</span>),</span><br><span class="line">ret_msg Nullable(<span class="keyword">String</span>),</span><br><span class="line">channelCode Nullable(<span class="keyword">String</span>),</span><br><span class="line">scUsageScenarios Nullable(<span class="keyword">String</span>),</span><br><span class="line">scUsePurpose Nullable(<span class="keyword">String</span>),</span><br><span class="line">protocolVerNm Nullable(<span class="keyword">String</span>),</span><br><span class="line">serialNm Nullable(<span class="keyword">String</span>),</span><br><span class="line">chanbl Nullable(Int32),</span><br><span class="line">ipType Nullable(<span class="keyword">String</span>),</span><br><span class="line">sourceIp Nullable(<span class="keyword">String</span>),</span><br><span class="line">bussProdName Nullable(<span class="keyword">String</span>),</span><br><span class="line">instNum Nullable(<span class="keyword">String</span>)</span><br><span class="line">)<span class="keyword">ENGINE</span> = <span class="keyword">Distributed</span>(perftest_3shards_1replicas, <span class="keyword">default</span>, trans_inf_local, sipHash64(order_id))</span><br></pre></td></tr></table></figure>
+
+<p>本地表(分布式DDL)</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> trans_inf_local <span class="keyword">ON</span> CLUSTER perftest_3shards_1replicas(</span><br><span class="line">seq_id Int64,</span><br><span class="line">prod_usr_id Int32,</span><br><span class="line">prod_id Int32,</span><br><span class="line">srv_id Int32,</span><br><span class="line">bl_id Int32,</span><br><span class="line">msg_id <span class="keyword">String</span>,</span><br><span class="line">ret_cd <span class="keyword">String</span>,</span><br><span class="line">bl Int32,</span><br><span class="line">chan_id Int32,</span><br><span class="line">rec_crt_tm DateTime,</span><br><span class="line">rec_upt_tm DateTime,</span><br><span class="line">ver Nullable(Int32),</span><br><span class="line">shp_num Nullable(<span class="keyword">String</span>),</span><br><span class="line">bk_cd_num Nullable(<span class="keyword">String</span>),</span><br><span class="line">map_id Int32,</span><br><span class="line">bk_nm Nullable(<span class="keyword">String</span>),</span><br><span class="line"><span class="keyword">name</span> Nullable(<span class="keyword">String</span>),</span><br><span class="line">certif_id Nullable(<span class="keyword">String</span>),</span><br><span class="line">mobile Nullable(<span class="keyword">String</span>),</span><br><span class="line">telecoms Nullable(<span class="keyword">String</span>),</span><br><span class="line">org_id Int32,</span><br><span class="line">trans_duration Nullable(Int64),</span><br><span class="line">total_duration Nullable(Int64),</span><br><span class="line">order_id <span class="keyword">String</span>,</span><br><span class="line">sc_name Nullable(<span class="keyword">String</span>),</span><br><span class="line">trans_id Nullable(<span class="keyword">String</span>),</span><br><span class="line">response_id Nullable(<span class="keyword">String</span>),</span><br><span class="line">ret_msg Nullable(<span class="keyword">String</span>),</span><br><span class="line">channelCode Nullable(<span class="keyword">String</span>),</span><br><span class="line">scUsageScenarios Nullable(<span class="keyword">String</span>),</span><br><span class="line">scUsePurpose Nullable(<span class="keyword">String</span>),</span><br><span class="line">protocolVerNm Nullable(<span class="keyword">String</span>),</span><br><span class="line">serialNm Nullable(<span class="keyword">String</span>),</span><br><span class="line">chanbl Nullable(Int32),</span><br><span class="line">ipType Nullable(<span class="keyword">String</span>),</span><br><span class="line">sourceIp Nullable(<span class="keyword">String</span>),</span><br><span class="line">bussProdName Nullable(<span class="keyword">String</span>),</span><br><span class="line">instNum Nullable(<span class="keyword">String</span>)</span><br><span class="line">)<span class="keyword">ENGINE</span> = ReplicatedMergeTree(<span class="string">'/clickhouse/tables/&#123;shard&#125;/trans_inf_local'</span>, <span class="string">'&#123;replica&#125;'</span>)</span><br><span class="line"><span class="keyword">PARTITION</span> <span class="keyword">BY</span> toYYYYMM(rec_crt_tm)</span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> order_id</span><br></pre></td></tr></table></figure>
+
+<p>交互式查询</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">clickhouse-client</span><br><span class="line">DROP table default.trans_inf ON CLUSTER perftest_3shards_1replicas;</span><br><span class="line">DROP table default.trans_inf_all ON CLUSTER perftest_3shards_1replicas;</span><br></pre></td></tr></table></figure>
+
+<p>非交互式查询</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">clickhouse-client --multiquery &lt; &#x2F;data&#x2F;4&#x2F;data31.sql</span><br></pre></td></tr></table></figure>
+
+<p>本地DDL</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> test_local(</span><br><span class="line">certif_id <span class="keyword">String</span>,</span><br><span class="line">bk_cd_num <span class="keyword">String</span></span><br><span class="line">)<span class="keyword">ENGINE</span> = ReplacingMergeTree()</span><br><span class="line"><span class="keyword">ORDER</span> <span class="keyword">BY</span> (certif_id, bk_cd_num)</span><br><span class="line">PRIMARY <span class="keyword">KEY</span> certif_id</span><br></pre></td></tr></table></figure>
+
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/ClickHouse/" rel="tag"># ClickHouse</a>
+              <a href="/tags/OLAP/" rel="tag"># OLAP</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/07/08/Opensource%20Style/" rel="prev" title="Open Source Style">
+      <i class="fa fa-chevron-left"></i> Open Source Style
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/10/09/Kubernetes%E5%AD%A6%E4%B9%A0/" rel="next" title="Kubernetes安装">
+      Kubernetes安装 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#"><span class="nav-number">1.</span> <span class="nav-text">ClickHouse安装</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.1.</span> <span class="nav-text">安装条件与准备</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.2.</span> <span class="nav-text">单机安装</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">1.3.</span> <span class="nav-text">Docker安装</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#"><span class="nav-number"></span> <span class="nav-text">集群部署</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#"><span class="nav-number">0.1.</span> <span class="nav-text">配置</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">李宁</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">39</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">35</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">71</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">李宁</span>
+</div>
+  <div class="powered-by">万物之始，大道至简
+  </div>
+  <span class="post-meta-divider">|</span>
+  <div class="theme-info">知易行难，悟在天成
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
